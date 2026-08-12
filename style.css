@@ -509,3 +509,45 @@ body {
 .notice__time { display: block; font-size: 12px; color: var(--text-sub); }
 .notice__chevron { flex: none; width: 20px; height: 20px; color: var(--text-sub); align-self: center; }
 .notice.is-unread { border-color: var(--pink); }
+
+/* ==========================================================================
+   [5] 会話ログ・相性レポート画面 / 辞退完了画面
+   ========================================================================== */
+.partner__row { display: flex; align-items: center; gap: 12px; }
+.partner__meta { flex: 1 1 auto; min-width: 0; }
+.partner__name { font-size: 18px; font-weight: 700; line-height: 1.35; margin: 0; }
+.partner__sub { font-size: 12px; color: var(--text-sub); margin: 2px 0 0; }
+
+.log__title { margin: 0 0 10px; font-size: 14px; color: var(--text-sub); }
+.chat--log { gap: 8px; }
+.bubble__who { display: block; font-size: 11px; font-weight: 700; opacity: .75; margin-bottom: 2px; }
+
+.axis__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.axis__label { font-size: 15px; font-weight: 600; }
+.axis__hint {
+  display: inline-block; margin-left: 6px; padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--track); color: var(--text-sub);
+  font-size: 11px; font-weight: 500;
+}
+.axis__score { font-size: 18px; font-weight: 700; color: var(--wine); }
+.axis__comment { margin-top: 10px; }
+.axis__quote {
+  margin: 8px 0 0;
+  font-size: 12px; font-style: italic; line-height: 1.7;
+  color: var(--text-sub);
+}
+
+.bar { height: 8px; border-radius: var(--radius-pill); background: var(--track); overflow: hidden; }
+.bar__fill {
+  height: 100%; width: 0;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--wine), var(--pink));
+  transition: width .7s ease-out;
+}
+.bar__fill--neutral { background: var(--neutral-bar); }
+
+.decision__note { margin: 0 0 12px; }
+.declined__demo { text-align: center; margin: 10px 0 0; }
+
+.empty .btn { margin-top: 14px; }

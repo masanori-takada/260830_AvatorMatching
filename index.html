@@ -99,8 +99,18 @@
         <h1 class="screen-title" data-autofocus tabindex="-1">お知らせ</h1>
         <div id="notificationsBody"></div>
       </section>
-      <section class="screen" data-screen="report" tabindex="-1"></section>
-      <section class="screen" data-screen="declined" tabindex="-1"></section>
+      <section class="screen" data-screen="report" tabindex="-1">
+        <div id="reportBody"></div>
+      </section>
+
+      <section class="screen" data-screen="declined" tabindex="-1">
+        <h1 class="screen-title" data-autofocus tabindex="-1">辞退しました</h1>
+        <div class="card">
+          <p class="text-body">辞退しました。相手には通知されません。アバターは引き続き会話を続けます。</p>
+        </div>
+        <button type="button" class="btn btn--primary" data-go="home">ホームに戻る</button>
+        <p class="declined__demo"><button type="button" class="btn-link" id="declinedReopen">デモ用: もう一度レポートを見る</button></p>
+      </section>
       <section class="screen" data-screen="reveal" tabindex="-1"></section>
       <section class="screen" data-screen="done" tabindex="-1"></section>
       <section class="screen" data-screen="home" tabindex="-1"></section>

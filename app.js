@@ -664,6 +664,153 @@
   }
 
   /* =======================================================================
+     [5] 会話ログ・相性レポート画面
+     ======================================================================= */
+
+  function partnerHeaderHTML() {
+    return '' +
+      '<div class="card partner">' +
+        '<div class="partner__row">' +
+          '<span class="icon-circle icon-circle--lg"><svg class="icon icon--lg" aria-hidden="true" focusable="false"><use href="#i-user"></use></svg></span>' +
+          '<div class="partner__meta">' +
+            '<h1 class="partner__name" data-autofocus tabindex="-1">' + esc(PARTNER.anonymousLabel) + '</h1>' +
+            '<p class="partner__sub">実名・所属は非表示です</p>' +
+          '</div>' +
+          '<span class="badge">相性 ' + PARTNER.compatibility + '%</span>' +
+        '</div>' +
+        '<p class="text-note">※お互いが「会う」を選ぶまで、実名・所属は表示されません。</p>' +
+      '</div>';
+  }
+
+  function logBubbleHTML(turn) {
+    var isSelf = turn.speaker === 'self';
+    return '<div class="bubble bubble--' + (isSelf ? 'self' : 'ai') + '">' +
+             '<span class="bubble__who">' + (isSelf ? 'あなたのアバター' : 'お相手のアバター') + '</span>' +
+             esc(turn.text) +
+           '</div>';
+  }
+
+  function conversationHTML() {
+    return '' +
+      '<div class="card log">' +
+        '<h2 class="section-title log__title">' + esc(PARTNER.conversation.timeLabel) + '</h2>' +
+        '<div class="chat chat--log">' + PARTNER.conversation.turns.map(logBubbleHTML).join('') + '</div>' +
+        '<p class="text-note">これは、あなたが寝ている間にAIアバター同士が交わした会話です。</p>' +
+      '</div>';
+  }
+
+  function axesHTML() {
+    return '<h2 class="section-title">相性レポート</h2>' + PARTNER.axes.map(function (axis) {
+      return '<div class="card axis">' +
+               '<div class="axis__head">' +
+                 '<span class="axis__label">' + esc(axis.label) +
+                   (axis.invertedGood ? '<span class="axis__hint">低いほど良い</span>' : '') +
+                 '</span>' +
+                 '<span class="axis__score">' + axis.score + '</span>' +
+               '</div>' +
+               '<div class="bar" role="img" aria-label="' + esc(axis.label) + ' ' + axis.score + ' / 100">' +
+                 '<div class="bar__fill' + (axis.invertedGood ? ' bar__fill--neutral' : '') + '" data-score="' + axis.score + '"></div>' +
+               '</div>' +
+               '<p class="text-body axis__comment">' + esc(axis.comment) + '</p>' +
+               '<p class="axis__quote">' + esc(axis.quote) + '</p>' +
+             '</div>';
+    }).join('');
+  }
+
+  function summaryHTML() {
+    return '<div class="card">' +
+             '<h2 class="section-title section-title--flush">総評</h2>' +
+             '<p class="text-body">' + esc(PARTNER.summary) + '</p>' +
+           '</div>';
+  }
+
+  function decisionHTML() {
+    if (state.decision === 'accept') {
+      return '<div class="card decision">' +
+               '<p class="card-title">あなたは「会う」を選択済みです</p>' +
+               '<button type="button" class="btn btn--primary" data-go="reveal">開示情報を見る</button>' +
+             '</div>';
+    }
+    return '<div class="card decision">' +
+             '<p class="text-note decision__note">あなたの判断は相手には通知されません。両者が「会う」を選んだ場合のみ、お互いに開示されます。</p>' +
+             '<button type="button" class="btn btn--primary" id="reportAccept">会う</button>' +
+             '<button type="button" class="btn btn--secondary" id="reportDecline">今回は辞退する</button>' +
+           '</div>';
+  }
+
+  // 表示時に width を 0 から目標値へトランジションさせる
+  function animateBars() {
+    var fills = el('reportBody').querySelectorAll('.bar__fill');
+    requestAnimationFrame(function () {
+      for (var i = 0; i < fills.length; i++) {
+        fills[i].style.width = fills[i].getAttribute('data-score') + '%';
+      }
+    });
+  }
+
+  function acceptMatch() {
+    state.decision = 'accept';
+    saveState();
+    showLoading('お相手も「会う」を選んでいます');
+    setTimeout(function () {
+      hideLoading();
+      showScreen('reveal');
+    }, 800);
+  }
+
+  function declineMatch() {
+    openSheet({
+      title: '辞退の確認',
+      message: '辞退すると、このお相手の情報は表示されなくなります。よろしいですか?',
+      confirmLabel: '辞退する',
+      danger: true,
+      onConfirm: function () {
+        state.decision = 'decline';
+        saveState();
+        showScreen('declined');
+      }
+    });
+  }
+
+  renderers.report = function () {
+    var body = el('reportBody');
+
+    // 未通知でこの画面に来た場合は空状態を出す(例外を投げない)
+    if (!state.notified) {
+      body.innerHTML =
+        '<h1 class="screen-title" data-autofocus tabindex="-1">相性レポート</h1>' +
+        '<div class="card empty">' +
+          '<p class="text-body">まだレポートはありません。アバターが会話を続けています。</p>' +
+          '<button type="button" class="btn btn--secondary" data-go="home">ホームに戻る</button>' +
+        '</div>';
+      return;
+    }
+
+    body.innerHTML =
+      partnerHeaderHTML() +
+      conversationHTML() +
+      axesHTML() +
+      summaryHTML() +
+      decisionHTML();
+
+    var accept = el('reportAccept');
+    if (accept) { accept.addEventListener('click', acceptMatch); }
+    var decline = el('reportDecline');
+    if (decline) { decline.addEventListener('click', declineMatch); }
+
+    animateBars();
+  };
+
+  function initReportScreen() {
+    el('declinedReopen').addEventListener('click', function () {
+      // デモ復帰用: 判断を取り消してレポートへ戻る
+      state.decision = null;
+      saveState();
+      showScreen('report');
+    });
+  }
+
+  /* =======================================================================
      ブラウザ離脱防止ガード(§7.2)
      画面遷移に履歴APIは使わない。戻る/スワイプバックでの離脱のみを防ぐ
      ======================================================================= */
@@ -704,6 +851,7 @@
     initInviteScreen();
     initInterviewScreen();
     initNotificationsScreen();
+    initReportScreen();
 
     // data-go="画面名" を持つ要素は共通で画面遷移する
     document.addEventListener('click', function (event) {
