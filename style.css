@@ -16,7 +16,7 @@
   --pink-soft:     #F7E3EC;  /* 最も淡いピンク(背景円、吹き出し) */
 
   --text-main:     #2E2A2C;
-  --text-sub:      #8A8085;
+  --text-sub:      #6E6469;
   --text-onwine:   #FFFFFF;
 
   --border:        #EFE6EA;
@@ -728,8 +728,3 @@ body {
   outline: 2px solid var(--wine);
   outline-offset: 2px;
 }
-
-/* --text-sub (#8A8085) は白背景でコントラスト比 4.5:1 以上を満たすが、
-   淡ピンク面(--pink-soft / --bg-subtle)の上では本文色を使う */
-.banner .text-body,
-.bubble--ai { color: var(--text-main); }
