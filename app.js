@@ -885,6 +885,104 @@
   };
 
   /* =======================================================================
+     [H] ホーム画面
+     ======================================================================= */
+
+  // メニューグリッド(4列 横1行)
+  var HOME_MENU = [
+    { icon: 'i-doc',    label: '会話ログ・相性レポート', target: 'report' },
+    { icon: 'i-shield', label: 'プライバシーについて',   target: 'privacy' },
+    { icon: 'i-help',   label: 'よくある質問',           target: 'faq' },
+    { icon: 'i-gear',   label: '設定',                   target: 'settings' }
+  ];
+
+  function statusText() {
+    if (state.decision === 'accept') { return 'お相手と面談日程を調整できます。'; }
+    if (state.decision === 'decline') { return '辞退しました。アバターは引き続き会話を続けています。'; }
+    if (state.notified) { return '相性の高いお相手が見つかりました。会話ログと相性レポートを確認できます。'; }
+    return 'あなたのアバターが、複数の候補アバターと会話を進めています。';
+  }
+
+  function statusActionLabel() {
+    return state.notified ? '相性レポートを見る' : '進行状況を見る';
+  }
+
+  function statusTargetScreen() {
+    return state.notified ? 'report' : 'waiting';
+  }
+
+  function homeNoticeCardHTML() {
+    var rows = state.notified
+      ? NOTIFICATIONS.slice(0, 2).map(function (item) {
+          return '<button type="button" class="notice-row" data-home-notification="' + item.id + '">' +
+                   '<span class="icon-circle"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-' + item.icon + '"></use></svg></span>' +
+                   '<span class="notice-row__body">' +
+                     '<span class="card-title">' + esc(item.title) + '</span>' +
+                     '<span class="notice__time">' + esc(item.time) + '</span>' +
+                   '</span>' +
+                   '<svg class="icon notice__chevron" aria-hidden="true" focusable="false"><use href="#i-chevron"></use></svg>' +
+                 '</button>';
+        }).join('')
+      : '<p class="text-body">まだお知らせはありません。</p>';
+
+    return '<div class="card">' +
+             '<div class="card__head">' +
+               '<h2 class="section-title section-title--flush">お知らせ</h2>' +
+               '<button type="button" class="btn-link" data-go="notifications">すべて見る &gt;</button>' +
+             '</div>' +
+             rows +
+           '</div>';
+  }
+
+  function menuGridHTML() {
+    return '<div class="menu-grid">' + HOME_MENU.map(function (item) {
+      return '<button type="button" class="menu-item" data-go="' + item.target + '">' +
+               '<span class="icon-circle"><svg class="icon" aria-hidden="true" focusable="false"><use href="#' + item.icon + '"></use></svg></span>' +
+               '<span class="menu-item__label">' + esc(item.label) + '</span>' +
+             '</button>';
+    }).join('') + '</div>';
+  }
+
+  renderers.home = function () {
+    var body = el('homeBody');
+
+    body.innerHTML =
+      heroCardHTML(false) +
+      '<div class="card status-card">' +
+        '<div class="status-card__head">' +
+          '<span class="icon-circle"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-avatar-pair"></use></svg></span>' +
+          '<div>' +
+            '<p class="card-title">現在の状況</p>' +
+            '<p class="text-body">' + esc(statusText()) + '</p>' +
+          '</div>' +
+        '</div>' +
+        stepsHTML() +
+        '<button type="button" class="btn btn--secondary home__status-cta" id="homeStatusGo">' + esc(statusActionLabel()) + '</button>' +
+      '</div>' +
+      homeNoticeCardHTML() +
+      menuGridHTML() +
+      '<button type="button" class="card banner" data-go="privacy">' +
+        '<span class="icon-circle"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg></span>' +
+        '<span class="banner__body">' +
+          '<span class="card-title">安心・匿名の設計</span>' +
+          '<span class="text-body">実名や所属は、あなたとお相手がOKした後にのみ開示されます。人事や運営がマッチ内容を見ることはできません。</span>' +
+        '</span>' +
+      '</button>';
+
+    el('homeStatusGo').addEventListener('click', function () {
+      showScreen(statusTargetScreen());
+    });
+
+    var noticeRows = body.querySelectorAll('[data-home-notification]');
+    for (var i = 0; i < noticeRows.length; i++) {
+      noticeRows[i].addEventListener('click', function (event) {
+        markNotificationRead(event.currentTarget.getAttribute('data-home-notification'));
+        showScreen('report');
+      });
+    }
+  };
+
+  /* =======================================================================
      ブラウザ離脱防止ガード(§7.2)
      画面遷移に履歴APIは使わない。戻る/スワイプバックでの離脱のみを防ぐ
      ======================================================================= */

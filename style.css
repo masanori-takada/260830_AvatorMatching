@@ -591,3 +591,45 @@ body {
 
 .done-card { text-align: center; padding: 32px 16px; margin-top: 40px; }
 .done-card .icon-circle { margin: 0 auto 14px; background: var(--wine); color: var(--text-onwine); }
+
+/* ==========================================================================
+   [H] ホーム画面
+   ========================================================================== */
+.home__status-cta { margin-top: 16px; min-height: 44px; font-size: 14px; }
+
+.notice-row {
+  width: 100%;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0;
+  border: 0; border-top: 1px solid var(--border);
+  background: transparent;
+  text-align: left;
+  font-family: inherit; color: var(--text-main);
+  cursor: pointer;
+}
+.notice-row:first-of-type { border-top: 0; }
+.notice-row__body { flex: 1 1 auto; min-width: 0; display: block; }
+
+.menu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.menu-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 4px;
+  border: 1px solid var(--border); border-radius: var(--radius-card);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  font-family: inherit; color: var(--text-main);
+  cursor: pointer;
+}
+.menu-item__label { font-size: 10px; font-weight: 600; line-height: 1.3; text-align: center; }
+
+.banner {
+  width: 100%;
+  display: flex; align-items: flex-start; gap: 12px;
+  text-align: left;
+  font-family: inherit; color: var(--text-main);
+  background: var(--bg-subtle);
+  cursor: pointer;
+}
+.banner__body { flex: 1 1 auto; min-width: 0; display: block; }
+.banner__body .card-title { display: block; }
+.banner__body .text-body { display: block; font-size: 13px; }
