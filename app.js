@@ -519,6 +519,107 @@
   }
 
   /* =======================================================================
+     ヒーローカード / ステップインジケーター(待機画面とホーム画面で共有)
+     ======================================================================= */
+
+  // withHotspot: true のとき、右下に隠しショートカット領域を含める(待機画面のみ)
+  function heroCardHTML(withHotspot) {
+    return '' +
+      '<div class="hero">' +
+        '<div class="hero__text">' +
+          '<h1 class="hero-title" data-autofocus tabindex="-1">AIが代わりに会っている。</h1>' +
+          '<p class="hero__lead">あなたのAIアバターが相手のアバターと会話し、相性を確かめています。</p>' +
+        '</div>' +
+        '<div class="hero__art">' +
+          '<img class="hero__img" src="assets/hero.png" alt="" ' +
+               'onload="this.parentNode.classList.add(\'has-img\')" onerror="this.remove()">' +
+          '<svg class="icon hero__icon" aria-hidden="true" focusable="false"><use href="#i-avatar-pair"></use></svg>' +
+        '</div>' +
+        (withHotspot ? '<span class="hero__hotspot" id="waitingHotspot" aria-hidden="true"></span>' : '') +
+      '</div>';
+  }
+
+  function stepsHTML() {
+    var current = currentStepIndex(state);
+    return '<ol class="steps">' + STEPS.map(function (step, index) {
+      var status = index < current ? 'done' : (index === current ? 'current' : 'todo');
+      var iconId = index < current ? 'i-check' : step.icon;
+      return '<li class="step step--' + status + '">' +
+               '<span class="step__mark"><svg class="icon" aria-hidden="true" focusable="false"><use href="#' + iconId + '"></use></svg></span>' +
+               '<span class="step__label">' + esc(step.label) + '</span>' +
+             '</li>';
+    }).join('') + '</ol>';
+  }
+
+  /* =======================================================================
+     [3] アバター会話中(待機)画面
+     ======================================================================= */
+
+  function startWaitingTimer() {
+    clearWaitingTimer();
+    waitingTimer = setTimeout(completeWaiting, 6000);
+  }
+
+  function completeWaiting() {
+    clearWaitingTimer();
+    if (state.notified) { return; }
+
+    state.notified = true;
+    saveState();
+
+    if (state.currentScreen === 'waiting') { renderers.waiting(); }
+    updateBellBadge();
+    showToast('新しいマッチ候補がいます', function () { showScreen('report'); });
+  }
+
+  // 展示会での事故防止として、ヒーローカード右下の目立たない領域の長押し(700ms)で
+  // 待機を即座に完了させる。対象領域を絞って誤発火を防ぐ
+  function attachWaitingShortcut() {
+    var hotspot = el('waitingHotspot');
+    if (!hotspot) { return; }
+
+    var pressTimer = null;
+    function startPress() {
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(completeWaiting, 700);
+    }
+    function cancelPress() { clearTimeout(pressTimer); }
+
+    hotspot.addEventListener('pointerdown', startPress);
+    hotspot.addEventListener('pointerup', cancelPress);
+    hotspot.addEventListener('pointerleave', cancelPress);
+    hotspot.addEventListener('pointercancel', cancelPress);
+  }
+
+  renderers.waiting = function () {
+    el('waitingBody').innerHTML =
+      heroCardHTML(true) +
+      '<div class="card status-card">' +
+        '<div class="status-card__head">' +
+          '<span class="icon-circle status-card__pulse"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-avatar-pair"></use></svg></span>' +
+          '<div>' +
+            '<p class="card-title">アバターが会話中です</p>' +
+            '<p class="text-body">あなたのアバターが、複数の候補アバターと会話を進めています。</p>' +
+          '</div>' +
+        '</div>' +
+        stepsHTML() +
+      '</div>' +
+      '<p class="text-note">相性の基準を満たしたときだけ通知が届きます。基準に満たない場合は、何も起きません。</p>' +
+      (state.notified
+        ? '<button type="button" class="btn btn--primary waiting__cta" id="waitingToNotifications">お知らせを見る</button>'
+        : '');
+
+    if (state.notified) {
+      el('waitingToNotifications').addEventListener('click', function () { showScreen('notifications'); });
+    }
+
+    attachWaitingShortcut();
+
+    // 通知済みなら演出を再生せず、通知済みの表示状態で描画するだけにする
+    if (!state.notified) { startWaitingTimer(); }
+  };
+
+  /* =======================================================================
      ブラウザ離脱防止ガード(§7.2)
      画面遷移に履歴APIは使わない。戻る/スワイプバックでの離脱のみを防ぐ
      ======================================================================= */

@@ -423,3 +423,68 @@ body {
 
 .interview__actions { margin-top: 18px; }
 .interview__actions[hidden] { display: none; }
+
+/* ==========================================================================
+   ヒーローカード / ステップインジケーター / 現在の状況カード
+   (待機画面とホーム画面で共有)
+   ========================================================================== */
+.hero {
+  position: relative;
+  display: flex; align-items: center; gap: 8px;
+  padding: 18px 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: linear-gradient(135deg, var(--bg-hero-a), var(--bg-hero-b));
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.hero__text { flex: 1 1 auto; min-width: 0; }
+.hero__lead { font-size: 13px; line-height: 1.7; margin: 0; }
+.hero__art {
+  position: relative; flex: none;
+  width: 96px; height: 96px;
+  display: flex; align-items: center; justify-content: center;
+}
+.hero__img { max-width: 100%; max-height: 100%; }
+.hero__icon { width: 64px; height: 64px; color: var(--plum); }
+.hero__art.has-img .hero__icon { display: none; }
+/* 展示会用の隠しショートカット領域。視覚的な変化は出さない */
+.hero__hotspot { position: absolute; right: 0; bottom: 0; width: 56px; height: 44px; }
+
+.status-card__head { display: flex; align-items: flex-start; gap: 12px; }
+.status-card__pulse { animation: pulse 2s ease-out infinite; }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(163, 43, 85, 0.18); }
+  50%      { box-shadow: 0 0 0 10px rgba(163, 43, 85, 0); }
+}
+
+.steps { list-style: none; display: flex; margin: 18px 0 0; padding: 0; }
+.step {
+  position: relative; flex: 1 1 0;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  text-align: center;
+}
+.step::before {
+  content: "";
+  position: absolute; top: 22px; left: -50%; right: 50%;
+  border-top: 1px dotted var(--text-sub);
+}
+.step:first-child::before { display: none; }
+.step--done::before, .step--current::before { border-top: 1px solid var(--wine); }
+.step__mark {
+  position: relative; z-index: 1;
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--step-todo); color: var(--text-sub);
+}
+.step--done .step__mark    { background: var(--pink); color: var(--text-onwine); }
+.step--current .step__mark { background: var(--wine); color: var(--text-onwine); }
+.step__label { font-size: 10px; line-height: 1.3; color: var(--text-sub); }
+.step--current .step__label { color: var(--wine); font-weight: 700; }
+
+/* ==========================================================================
+   [3] アバター会話中(待機)画面
+   ========================================================================== */
+.waiting__cta { margin-top: 16px; }
