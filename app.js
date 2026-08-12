@@ -500,7 +500,8 @@
     });
 
     textInput.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter' && textInput.value.trim() !== '') {
+      // IME変換確定のEnterでは送信しない(isComposing中は無視)
+      if (event.key === 'Enter' && !event.isComposing && textInput.value.trim() !== '') {
         submitInterviewAnswer(textInput.value.trim());
       }
     });
