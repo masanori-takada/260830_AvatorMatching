@@ -983,6 +983,53 @@
   };
 
   /* =======================================================================
+     [M] マイページ / [S] 設定
+     ======================================================================= */
+
+  renderers.mypage = function () {
+    var stepLabel = STEPS[currentStepIndex(state)].label;
+
+    var answersHTML = state.answers.length === 0
+      ? '<div class="card"><p class="text-body">まだ回答がありません。</p></div>'
+      : state.answers.map(function (item) {
+          return '<div class="card qa">' +
+                   '<p class="qa__q">' + esc(item.question) + '</p>' +
+                   '<p class="qa__a">' + esc(item.answer) + '</p>' +
+                 '</div>';
+        }).join('');
+
+    el('mypageBody').innerHTML =
+      '<div class="card">' +
+        '<p class="card-title">現在のステップ</p>' +
+        '<p class="text-body">' + esc(stepLabel) + '</p>' +
+      '</div>' +
+      '<h2 class="section-title">インタビューの回答</h2>' +
+      answersHTML;
+  };
+
+  renderers.settings = function () {
+    el('settingsNotify').checked = state.notificationsEnabled === true;
+  };
+
+  function initSettingsScreen() {
+    el('settingsNotify').addEventListener('change', function (event) {
+      // 見た目のみ。state には保存するが挙動には影響しない
+      state.notificationsEnabled = event.target.checked;
+      saveState();
+    });
+
+    el('settingsReset').addEventListener('click', function () {
+      openSheet({
+        title: 'デモをリセット',
+        message: '保存されたデモの進行状況をすべて削除して、最初からやり直します。よろしいですか?',
+        confirmLabel: 'リセットする',
+        danger: true,
+        onConfirm: resetDemo
+      });
+    });
+  }
+
+  /* =======================================================================
      ブラウザ離脱防止ガード(§7.2)
      画面遷移に履歴APIは使わない。戻る/スワイプバックでの離脱のみを防ぐ
      ======================================================================= */
@@ -1024,6 +1071,7 @@
     initInterviewScreen();
     initNotificationsScreen();
     initReportScreen();
+    initSettingsScreen();
 
     // data-go="画面名" を持つ要素は共通で画面遷移する
     document.addEventListener('click', function (event) {

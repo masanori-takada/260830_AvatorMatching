@@ -183,9 +183,53 @@
           <p class="text-body faq__a">知られません。人事が個人のマッチ内容を閲覧することはできません。</p>
         </details>
       </section>
-      <section class="screen" data-screen="mypage" tabindex="-1"></section>
-      <section class="screen" data-screen="profile" tabindex="-1"></section>
-      <section class="screen" data-screen="settings" tabindex="-1"></section>
+      <section class="screen" data-screen="mypage" tabindex="-1">
+        <h1 class="screen-title" data-autofocus tabindex="-1">マイページ</h1>
+        <div id="mypageBody"></div>
+      </section>
+
+      <section class="screen" data-screen="profile" tabindex="-1">
+        <h1 class="screen-title" data-autofocus tabindex="-1">プロフィール</h1>
+
+        <div class="card profile-card">
+          <span class="icon-circle icon-circle--lg"><svg class="icon icon--lg" aria-hidden="true" focusable="false"><use href="#i-user"></use></svg></span>
+          <p class="profile-card__id">匿名ID: KRY-4821</p>
+          <p class="profile-card__company">登録企業: 参加企業A</p>
+        </div>
+
+        <div class="card">
+          <p class="text-body">実名・所属は登録されていますが、アプリ上には表示されません。</p>
+          <p class="text-note">お互いが「会う」を選んだときにのみ、お二人の間だけで開示されます。</p>
+        </div>
+
+        <button type="button" class="btn btn--secondary" data-go="privacy">プライバシーについて</button>
+      </section>
+
+      <section class="screen" data-screen="settings" tabindex="-1">
+        <h1 class="screen-title" data-autofocus tabindex="-1">設定</h1>
+
+        <div class="card">
+          <div class="row-toggle">
+            <label class="row-toggle__label" for="settingsNotify">通知を受け取る</label>
+            <input type="checkbox" class="row-toggle__input" id="settingsNotify" role="switch">
+          </div>
+          <p class="text-note">※デモでは表示のみで、通知の挙動は変わりません。</p>
+        </div>
+
+        <div class="card list">
+          <button type="button" class="list__item" data-go="privacy">
+            <span>プライバシーについて</span>
+            <svg class="icon notice__chevron" aria-hidden="true" focusable="false"><use href="#i-chevron"></use></svg>
+          </button>
+          <button type="button" class="list__item" data-go="faq">
+            <span>よくある質問</span>
+            <svg class="icon notice__chevron" aria-hidden="true" focusable="false"><use href="#i-chevron"></use></svg>
+          </button>
+        </div>
+
+        <button type="button" class="btn btn--danger" id="settingsReset">デモをリセット</button>
+        <p class="text-note">保存された進行状況をすべて削除し、招待コード入力画面から再開します。展示会で次のデモを始める前に実行してください。</p>
+      </section>
     </main>
 
     <nav class="tab-bar" id="tabBar" hidden aria-label="メインナビゲーション">
