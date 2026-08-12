@@ -54,7 +54,24 @@
     </header>
 
     <main class="viewport" id="viewport">
-      <section class="screen" data-screen="invite" tabindex="-1"></section>
+      <section class="screen screen--invite" data-screen="invite" tabindex="-1">
+        <div class="invite__brand">
+          <span class="icon-circle icon-circle--lg"><svg class="icon icon--lg" aria-hidden="true" focusable="false"><use href="#i-logo"></use></svg></span>
+          <h1 class="invite__service" data-autofocus tabindex="-1">AIアバター自動マッチング</h1>
+          <p class="invite__catch">AIが代わりに会っている。</p>
+        </div>
+
+        <div class="card">
+          <p class="text-body">勤務先から配布された招待コードを入力してください。実名や所属は、相手とお互いがOKするまで誰にも表示されません。</p>
+          <label class="field__label" for="inviteInput">招待コード</label>
+          <input class="field__input" id="inviteInput" type="text" placeholder="例: KARIYA-2026"
+                 autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="inviteError">
+          <p class="field__error" id="inviteError" role="alert" hidden>招待コードを入力してください</p>
+          <button type="button" class="btn btn--primary invite__submit" id="inviteSubmit">登録する</button>
+        </div>
+
+        <p class="text-note">※本アプリはデモ用です。入力内容はお使いの端末内にのみ保存され、外部には送信されません。</p>
+      </section>
       <section class="screen" data-screen="interview" tabindex="-1"></section>
       <section class="screen" data-screen="waiting" tabindex="-1"></section>
       <section class="screen" data-screen="notifications" tabindex="-1"></section>

@@ -353,6 +353,51 @@
   }
 
   /* =======================================================================
+     [1] 招待コード入力画面
+     ======================================================================= */
+
+  renderers.invite = function () {
+    var input = el('inviteInput');
+    input.value = state.inviteCode || '';
+    input.classList.remove('is-error');
+    el('inviteError').hidden = true;
+  };
+
+  function submitInviteCode() {
+    var input = el('inviteInput');
+    var value = input.value.trim();
+
+    // 唯一のバリデーション: 空欄または空白のみは通さない
+    if (value === '') {
+      el('inviteError').hidden = false;
+      input.classList.add('is-error');
+      input.focus();
+      return;
+    }
+
+    // 空欄でなければ、どんな文字列でも通す(形式・長さ・大文字小文字の検証は行わない)
+    state.inviteCode = value;
+    state.registered = true;
+    saveState();
+    showScreen('interview');
+  }
+
+  function initInviteScreen() {
+    var input = el('inviteInput');
+
+    input.addEventListener('input', function () {
+      el('inviteError').hidden = true;
+      input.classList.remove('is-error');
+    });
+
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') { submitInviteCode(); }
+    });
+
+    el('inviteSubmit').addEventListener('click', submitInviteCode);
+  }
+
+  /* =======================================================================
      ブラウザ離脱防止ガード(§7.2)
      画面遷移に履歴APIは使わない。戻る/スワイプバックでの離脱のみを防ぐ
      ======================================================================= */
@@ -390,6 +435,7 @@
     // ここで例外を握りつぶし、離脱防止ガードが使えなくてもアプリ本体は起動できるようにする。
     try { installBackGuard(); } catch (e) {}
     try { initShell(); } catch (e) {}
+    initInviteScreen();
 
     // data-go="画面名" を持つ要素は共通で画面遷移する
     document.addEventListener('click', function (event) {

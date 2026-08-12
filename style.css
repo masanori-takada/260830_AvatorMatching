@@ -355,3 +355,13 @@ body {
   animation: spin .8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ==========================================================================
+   [1] 招待コード入力画面
+   ========================================================================== */
+.screen--invite { padding-top: 48px; }
+.invite__brand { text-align: center; margin-bottom: 28px; }
+.invite__brand .icon-circle { margin: 0 auto 14px; }
+.invite__service { font-size: 18px; font-weight: 700; line-height: 1.35; margin: 0 0 6px; }
+.invite__catch { font-size: 26px; font-weight: 700; line-height: 1.35; margin: 0; color: var(--wine); }
+.invite__submit { margin-top: 18px; }
