@@ -488,3 +488,24 @@ body {
    [3] アバター会話中(待機)画面
    ========================================================================== */
 .waiting__cta { margin-top: 16px; }
+
+/* ==========================================================================
+   [4] お知らせ一覧画面
+   ========================================================================== */
+.notice {
+  width: 100%;
+  display: flex; align-items: flex-start; gap: 12px;
+  text-align: left;
+  font-family: inherit; color: var(--text-main);
+  cursor: pointer;
+}
+.notice__body { flex: 1 1 auto; min-width: 0; display: block; }
+.notice__title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 15px; font-weight: 600; line-height: 1.5;
+}
+.notice__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--wine); flex: none; }
+.notice__text { display: block; font-size: 14px; line-height: 1.7; }
+.notice__time { display: block; font-size: 12px; color: var(--text-sub); }
+.notice__chevron { flex: none; width: 20px; height: 20px; color: var(--text-sub); align-self: center; }
+.notice.is-unread { border-color: var(--pink); }

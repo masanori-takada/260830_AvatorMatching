@@ -620,6 +620,50 @@
   };
 
   /* =======================================================================
+     [4] お知らせ一覧画面
+     ======================================================================= */
+
+  renderers.notifications = function () {
+    var body = el('notificationsBody');
+
+    // 未通知のときはリストの代わりに空状態を出す(例外を投げない)
+    if (!state.notified) {
+      body.innerHTML =
+        '<div class="card empty">' +
+          '<span class="icon-circle"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg></span>' +
+          '<p class="text-body">まだお知らせはありません。アバターが会話を続けています。</p>' +
+        '</div>';
+      return;
+    }
+
+    body.innerHTML = NOTIFICATIONS.map(function (item) {
+      var unread = state.readNotificationIds.indexOf(item.id) === -1;
+      return '<button type="button" class="card notice' + (unread ? ' is-unread' : '') + '" data-notification="' + item.id + '">' +
+               '<span class="icon-circle"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-' + item.icon + '"></use></svg></span>' +
+               '<span class="notice__body">' +
+                 '<span class="notice__title">' +
+                   (unread ? '<span class="notice__dot" aria-hidden="true"></span><span class="sr-only">未読</span>' : '') +
+                   esc(item.title) +
+                 '</span>' +
+                 '<span class="notice__text">' + esc(item.body) + '</span>' +
+                 '<span class="notice__time">' + esc(item.time) + '</span>' +
+               '</span>' +
+               '<svg class="icon notice__chevron" aria-hidden="true" focusable="false"><use href="#i-chevron"></use></svg>' +
+             '</button>';
+    }).join('');
+  };
+
+  function initNotificationsScreen() {
+    el('notificationsBody').addEventListener('click', function (event) {
+      var button = event.target.closest('[data-notification]');
+      if (!button) { return; }
+      // デモの単純化のため、どちらのカードも遷移先は report
+      markNotificationRead(button.getAttribute('data-notification'));
+      showScreen('report');
+    });
+  }
+
+  /* =======================================================================
      ブラウザ離脱防止ガード(§7.2)
      画面遷移に履歴APIは使わない。戻る/スワイプバックでの離脱のみを防ぐ
      ======================================================================= */
@@ -659,6 +703,7 @@
     try { initShell(); } catch (e) {}
     initInviteScreen();
     initInterviewScreen();
+    initNotificationsScreen();
 
     // data-go="画面名" を持つ要素は共通で画面遷移する
     document.addEventListener('click', function (event) {
