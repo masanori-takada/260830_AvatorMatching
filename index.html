@@ -72,7 +72,26 @@
 
         <p class="text-note">※本アプリはデモ用です。入力内容はお使いの端末内にのみ保存され、外部には送信されません。</p>
       </section>
-      <section class="screen" data-screen="interview" tabindex="-1"></section>
+      <section class="screen screen--interview" data-screen="interview" tabindex="-1">
+        <div class="interview__head">
+          <h1 class="screen-title interview__title" data-autofocus tabindex="-1">AIインタビュー</h1>
+          <span class="interview__progress" id="interviewProgress">1 / 6</span>
+        </div>
+        <div class="progress"><div class="progress__fill" id="interviewProgressBar" style="width:0%"></div></div>
+
+        <div class="chat interview__chat" id="interviewChat"></div>
+
+        <div class="interview__input" id="interviewInput" hidden>
+          <label class="sr-only" for="interviewText">回答を入力</label>
+          <input class="field__input" id="interviewText" type="text" placeholder="回答を入力してください"
+                 autocomplete="off" spellcheck="false">
+          <button type="button" class="interview__send" id="interviewSend" disabled>送信</button>
+        </div>
+
+        <div class="interview__actions" id="interviewActions" hidden>
+          <button type="button" class="btn btn--primary" id="interviewFinish">アバターにまかせる</button>
+        </div>
+      </section>
       <section class="screen" data-screen="waiting" tabindex="-1"></section>
       <section class="screen" data-screen="notifications" tabindex="-1"></section>
       <section class="screen" data-screen="report" tabindex="-1"></section>

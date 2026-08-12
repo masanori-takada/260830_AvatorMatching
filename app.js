@@ -398,6 +398,126 @@
   }
 
   /* =======================================================================
+     [2] AIインタビュー画面
+     ======================================================================= */
+
+  var INTERVIEW_INTRO = 'はじめまして。あなたのAIアバターです。これから6つだけ質問させてください。あなたの答え方や考え方を学んで、私があなたの代わりに相手と話します。';
+  var INTERVIEW_OUTRO = 'ありがとうございます。あなたのことが分かってきました。あとは私にまかせて、ゆっくり休んでください。';
+
+  var interviewTimer = null;
+
+  function bubbleHTML(side, text) {
+    return '<div class="bubble bubble--' + side + '">' + esc(text) + '</div>';
+  }
+
+  function scrollViewportToBottom() {
+    var viewport = el('viewport');
+    viewport.scrollTop = viewport.scrollHeight;
+  }
+
+  renderers.interview = function () {
+    clearTimeout(interviewTimer);
+
+    var answered = state.answers.length;
+    var question = QUESTIONS[answered] || null;
+
+    // 導入メッセージ → 回答済みの履歴 → 現在の質問(または締めのメッセージ)
+    var html = bubbleHTML('ai', INTERVIEW_INTRO);
+    state.answers.forEach(function (item) {
+      html += bubbleHTML('ai', item.question);
+      html += bubbleHTML('self', item.answer);
+    });
+
+    if (question) {
+      html += bubbleHTML('ai', question.text);
+      if (question.type === 'choice') {
+        html += '<div class="choices">' + question.options.map(function (option, index) {
+          return '<button type="button" class="choice" data-option="' + index + '">' + esc(option) + '</button>';
+        }).join('') + '</div>';
+      }
+    } else {
+      html += bubbleHTML('ai', INTERVIEW_OUTRO);
+    }
+
+    el('interviewChat').innerHTML = html;
+
+    el('interviewProgress').textContent =
+      (question ? answered + 1 : QUESTIONS.length) + ' / ' + QUESTIONS.length;
+    el('interviewProgressBar').style.width =
+      Math.round((answered / QUESTIONS.length) * 100) + '%';
+
+    var textInput = el('interviewText');
+    textInput.value = '';
+    el('interviewSend').disabled = true;
+
+    // 自由記述の設問のときだけ入力欄を出す。全問回答後だけ完了ボタンを出す
+    el('interviewInput').hidden = !(question && question.type === 'free');
+    el('interviewActions').hidden = question !== null;
+
+    scrollViewportToBottom();
+  };
+
+  function submitInterviewAnswer(answer) {
+    var index = state.answers.length;
+    var question = QUESTIONS[index];
+    if (!question) { return; }
+
+    state.answers.push({
+      id: question.id,
+      question: question.text,
+      answer: answer,
+      type: question.type
+    });
+    saveState();
+
+    // 自分の吹き出しを即時追加し、タイピング演出をはさんでから次の質問を描画する
+    var chat = el('interviewChat');
+    var choices = chat.querySelector('.choices');
+    if (choices) { choices.remove(); }
+    chat.insertAdjacentHTML('beforeend', bubbleHTML('self', answer));
+    chat.insertAdjacentHTML('beforeend',
+      '<div class="bubble bubble--ai bubble--typing"><span></span><span></span><span></span></div>');
+    el('interviewInput').hidden = true;
+    scrollViewportToBottom();
+
+    interviewTimer = setTimeout(function () { renderers.interview(); }, 600);
+  }
+
+  function initInterviewScreen() {
+    el('interviewChat').addEventListener('click', function (event) {
+      var button = event.target.closest('.choice');
+      if (!button) { return; }
+      var question = QUESTIONS[state.answers.length];
+      if (!question || question.type !== 'choice') { return; }
+      submitInterviewAnswer(question.options[Number(button.getAttribute('data-option'))]);
+    });
+
+    var textInput = el('interviewText');
+
+    textInput.addEventListener('input', function () {
+      // 空欄(空白のみ)では送信できない
+      el('interviewSend').disabled = textInput.value.trim() === '';
+    });
+
+    textInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' && textInput.value.trim() !== '') {
+        submitInterviewAnswer(textInput.value.trim());
+      }
+    });
+
+    el('interviewSend').addEventListener('click', function () {
+      var value = textInput.value.trim();
+      if (value !== '') { submitInterviewAnswer(value); }
+    });
+
+    el('interviewFinish').addEventListener('click', function () {
+      state.interviewDone = true;
+      saveState();
+      showScreen('waiting');
+    });
+  }
+
+  /* =======================================================================
      ブラウザ離脱防止ガード(§7.2)
      画面遷移に履歴APIは使わない。戻る/スワイプバックでの離脱のみを防ぐ
      ======================================================================= */
@@ -436,6 +556,7 @@
     try { installBackGuard(); } catch (e) {}
     try { initShell(); } catch (e) {}
     initInviteScreen();
+    initInterviewScreen();
 
     // data-go="画面名" を持つ要素は共通で画面遷移する
     document.addEventListener('click', function (event) {
