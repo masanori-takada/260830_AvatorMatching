@@ -706,3 +706,30 @@ body {
   cursor: pointer;
 }
 .list__item:first-child { border-top: 0; }
+
+/* ==========================================================================
+   仕上げ: フォーカスリング / コントラスト
+   ========================================================================== */
+.btn:focus-visible,
+.btn-link:focus-visible,
+.choice:focus-visible,
+.interview__send:focus-visible,
+.tab:focus-visible,
+.bell:focus-visible,
+.notice:focus-visible,
+.notice-row:focus-visible,
+.menu-item:focus-visible,
+.banner:focus-visible,
+.slot:focus-visible,
+.list__item:focus-visible,
+.faq__q:focus-visible,
+.row-toggle__input:focus-visible,
+.sheet__backdrop:focus-visible {
+  outline: 2px solid var(--wine);
+  outline-offset: 2px;
+}
+
+/* --text-sub (#8A8085) は白背景でコントラスト比 4.5:1 以上を満たすが、
+   淡ピンク面(--pink-soft / --bg-subtle)の上では本文色を使う */
+.banner .text-body,
+.bubble--ai { color: var(--text-main); }

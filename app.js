@@ -738,14 +738,23 @@
            '</div>';
   }
 
-  // 表示時に width を 0 から目標値へトランジションさせる
+  function prefersReducedMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  // 表示時に width を 0 から目標値へトランジションさせる。
+  // reduce 指定時は最終状態を即座に適用する
   function animateBars() {
     var fills = el('reportBody').querySelectorAll('.bar__fill');
-    requestAnimationFrame(function () {
+
+    function apply() {
       for (var i = 0; i < fills.length; i++) {
         fills[i].style.width = fills[i].getAttribute('data-score') + '%';
       }
-    });
+    }
+
+    if (prefersReducedMotion()) { apply(); return; }
+    requestAnimationFrame(apply);
   }
 
   function acceptMatch() {
@@ -857,8 +866,13 @@
         (state.selectedSlotId ? '' : ' disabled') + '>この日時で調整する</button>' +
       '<p class="text-note">開示された情報は、お二人以外には共有されません。人事・運営がこの内容を閲覧することはありません。</p>';
 
-    // 下からフェードイン+わずかにスライドアップ(約600ms)
-    requestAnimationFrame(function () { el('revealCard').classList.add('is-shown'); });
+    // 下からフェードイン+わずかにスライドアップ(約600ms)。
+    // reduce 指定時は最終状態を即座に適用する
+    if (prefersReducedMotion()) {
+      el('revealCard').classList.add('is-shown');
+    } else {
+      requestAnimationFrame(function () { el('revealCard').classList.add('is-shown'); });
+    }
 
     var slotButtons = body.querySelectorAll('[data-slot]');
     for (var i = 0; i < slotButtons.length; i++) {
