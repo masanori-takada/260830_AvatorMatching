@@ -283,8 +283,11 @@
   /* ----- トースト(通知バナー) ----- */
 
   var toastTimer = null;
+  var toastHideTimer = null;
 
   function showToast(text, onTap) {
+    // 直前の非表示タイマーが後から発火して新しいトーストを隠すレースを防ぐ
+    clearTimeout(toastHideTimer);
     var toast = el('toast');
     var button = el('toastButton');
     button.querySelector('.toast__text').textContent = text;
@@ -303,7 +306,8 @@
     clearTimeout(toastTimer);
     var toast = el('toast');
     toast.classList.remove('is-visible');
-    setTimeout(function () { toast.hidden = true; }, 300);
+    clearTimeout(toastHideTimer);
+    toastHideTimer = setTimeout(function () { toast.hidden = true; }, 300);
   }
 
   /* ----- 確認シート(window.confirm は使わない) ----- */
@@ -385,7 +389,7 @@
     // file:// 等の環境では history.pushState が SecurityError を投げることがある。
     // ここで例外を握りつぶし、離脱防止ガードが使えなくてもアプリ本体は起動できるようにする。
     try { installBackGuard(); } catch (e) {}
-    initShell();
+    try { initShell(); } catch (e) {}
 
     // data-go="画面名" を持つ要素は共通で画面遷移する
     document.addEventListener('click', function (event) {
