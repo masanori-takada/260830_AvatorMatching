@@ -111,8 +111,17 @@
         <button type="button" class="btn btn--primary" data-go="home">ホームに戻る</button>
         <p class="declined__demo"><button type="button" class="btn-link" id="declinedReopen">デモ用: もう一度レポートを見る</button></p>
       </section>
-      <section class="screen" data-screen="reveal" tabindex="-1"></section>
-      <section class="screen" data-screen="done" tabindex="-1"></section>
+      <section class="screen" data-screen="reveal" tabindex="-1">
+        <div id="revealBody"></div>
+      </section>
+      <section class="screen" data-screen="done" tabindex="-1">
+        <div class="card done-card">
+          <span class="icon-circle icon-circle--lg"><svg class="icon icon--lg" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg></span>
+          <h1 class="screen-title" data-autofocus tabindex="-1">日程を送信しました</h1>
+          <p class="text-body">日程を送信しました。当日の会場・時間は追ってお知らせします。</p>
+        </div>
+        <button type="button" class="btn btn--primary" data-go="home">ホームに戻る</button>
+      </section>
       <section class="screen" data-screen="home" tabindex="-1"></section>
       <section class="screen" data-screen="privacy" tabindex="-1"></section>
       <section class="screen" data-screen="faq" tabindex="-1"></section>

@@ -811,6 +811,80 @@
   }
 
   /* =======================================================================
+     [6] 実名開示画面
+     ======================================================================= */
+
+  renderers.reveal = function () {
+    var body = el('revealBody');
+
+    // 「会う」を選ぶ前にこの画面へ来た場合は空状態を出す(例外を投げない)
+    if (state.decision !== 'accept') {
+      body.innerHTML =
+        '<h1 class="screen-title" data-autofocus tabindex="-1">開示情報</h1>' +
+        '<div class="card empty">' +
+          '<p class="text-body">まだ開示できる情報はありません。相性レポートで「会う」を選ぶと表示されます。</p>' +
+          '<button type="button" class="btn btn--secondary" data-go="home">ホームに戻る</button>' +
+        '</div>';
+      return;
+    }
+
+    var revealed = PARTNER.revealed;
+
+    body.innerHTML =
+      '<h1 class="screen-title" data-autofocus tabindex="-1">お互いが「会う」を選びました</h1>' +
+      '<div class="card reveal-card" id="revealCard">' +
+        '<span class="icon-circle icon-circle--lg"><svg class="icon icon--lg" aria-hidden="true" focusable="false"><use href="#i-user"></use></svg></span>' +
+        '<dl class="reveal-list">' +
+          '<div class="reveal-row"><dt>氏名</dt><dd>' + esc(revealed.name) + '</dd></div>' +
+          '<div class="reveal-row"><dt>所属</dt><dd>' + esc(revealed.company) + ' / ' + esc(revealed.department) + '</dd></div>' +
+          '<div class="reveal-row"><dt>年代</dt><dd>' + esc(revealed.ageRange) + '</dd></div>' +
+          '<div class="reveal-row"><dt>一言</dt><dd>' + esc(revealed.message) + '</dd></div>' +
+        '</dl>' +
+      '</div>' +
+      '<h2 class="section-title">面談候補日時</h2>' +
+      PARTNER.slots.map(function (slot) {
+        var selected = state.selectedSlotId === slot.id;
+        return '<button type="button" class="card slot' + (selected ? ' is-selected' : '') + '" ' +
+                 'data-slot="' + slot.id + '" aria-pressed="' + (selected ? 'true' : 'false') + '">' +
+                 '<span class="icon-circle"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg></span>' +
+                 '<span class="slot__body">' +
+                   '<span class="slot__label">' + esc(slot.label) + '</span>' +
+                   '<span class="slot__place">' + esc(slot.place) + '</span>' +
+                 '</span>' +
+               '</button>';
+      }).join('') +
+      '<button type="button" class="btn btn--primary reveal__cta" id="revealSchedule"' +
+        (state.selectedSlotId ? '' : ' disabled') + '>この日時で調整する</button>' +
+      '<p class="text-note">開示された情報は、お二人以外には共有されません。人事・運営がこの内容を閲覧することはありません。</p>';
+
+    // 下からフェードイン+わずかにスライドアップ(約600ms)
+    requestAnimationFrame(function () { el('revealCard').classList.add('is-shown'); });
+
+    var slotButtons = body.querySelectorAll('[data-slot]');
+    for (var i = 0; i < slotButtons.length; i++) {
+      slotButtons[i].addEventListener('click', function (event) {
+        var button = event.currentTarget;
+        state.selectedSlotId = button.getAttribute('data-slot');
+        saveState();
+        // 開示カードの演出を再生し直さないよう、選択状態だけを差し替える
+        for (var j = 0; j < slotButtons.length; j++) {
+          var isSelected = slotButtons[j].getAttribute('data-slot') === state.selectedSlotId;
+          slotButtons[j].classList.toggle('is-selected', isSelected);
+          slotButtons[j].setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+        }
+        el('revealSchedule').disabled = false;
+      });
+    }
+
+    el('revealSchedule').addEventListener('click', function () {
+      if (!state.selectedSlotId) { return; }
+      state.scheduled = true;
+      saveState();
+      showScreen('done');
+    });
+  };
+
+  /* =======================================================================
      ブラウザ離脱防止ガード(§7.2)
      画面遷移に履歴APIは使わない。戻る/スワイプバックでの離脱のみを防ぐ
      ======================================================================= */

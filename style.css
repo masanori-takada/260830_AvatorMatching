@@ -551,3 +551,43 @@ body {
 .declined__demo { text-align: center; margin: 10px 0 0; }
 
 .empty .btn { margin-top: 14px; }
+
+/* ==========================================================================
+   [6] 実名開示画面 / 完了画面
+   ========================================================================== */
+.reveal-card {
+  text-align: center;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity .6s ease-out, transform .6s ease-out;
+}
+.reveal-card.is-shown { opacity: 1; transform: none; }
+.reveal-card .icon-circle { margin: 0 auto 14px; }
+
+.reveal-list { margin: 0; text-align: left; }
+.reveal-row {
+  display: flex; gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.reveal-row:first-child { border-top: 0; }
+.reveal-row dt { flex: none; width: 56px; font-size: 12px; font-weight: 600; color: var(--text-sub); }
+.reveal-row dd { flex: 1 1 auto; margin: 0; font-size: 14px; font-weight: 600; }
+
+.slot {
+  width: 100%;
+  display: flex; align-items: center; gap: 12px;
+  text-align: left;
+  font-family: inherit; color: var(--text-main);
+  cursor: pointer;
+}
+.slot__body { flex: 1 1 auto; min-width: 0; display: block; }
+.slot__label { display: block; font-size: 15px; font-weight: 600; line-height: 1.5; }
+.slot__place { display: block; font-size: 12px; color: var(--text-sub); }
+.slot.is-selected { border-color: var(--wine); background: var(--pink-soft); }
+.slot.is-selected .icon-circle { background: var(--wine); color: var(--text-onwine); }
+
+.reveal__cta { margin-top: 4px; }
+
+.done-card { text-align: center; padding: 32px 16px; margin-top: 40px; }
+.done-card .icon-circle { margin: 0 auto 14px; background: var(--wine); color: var(--text-onwine); }
