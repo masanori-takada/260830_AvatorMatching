@@ -255,7 +255,9 @@
 
     fitPhone();
     window.addEventListener('resize', fitPhone);
-    installBackGuard();
+    // file:// 等の環境では history.pushState が SecurityError を投げることがある。
+    // ここで例外を握りつぶし、離脱防止ガードが使えなくてもアプリ本体は起動できるようにする。
+    try { installBackGuard(); } catch (e) {}
 
     // data-go="画面名" を持つ要素は共通で画面遷移する
     document.addEventListener('click', function (event) {
