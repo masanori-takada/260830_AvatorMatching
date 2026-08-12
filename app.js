@@ -157,6 +157,9 @@
 
   function resetDemo() {
     clearWaitingTimer();
+    hideToast();
+    closeSheet();
+    hideLoading();
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* 無視 */ }
     state = clone(INITIAL_STATE);
     saveState();
@@ -217,8 +220,132 @@
 
     if (renderers[name]) { renderers[name](); }
 
+    updateChrome(name);
+
     var head = target.querySelector('[data-autofocus]') || target;
     head.focus({ preventScroll: true });
+  }
+
+  /* =======================================================================
+     共通シェル(ヘッダー / タブバー / トースト / 確認シート / ローディング)
+     ======================================================================= */
+
+  // ヘッダーと下部タブバーを出さない画面(オンボーディングの一本道感を出す)
+  var CHROME_HIDDEN_SCREENS = ['invite', 'interview'];
+
+  // 画面名 → アクティブにする下部タブ
+  var TAB_FOR_SCREEN = {
+    home: 'home',
+    mypage: 'mypage',
+    notifications: 'messages',
+    profile: 'profile'
+  };
+
+  function updateChrome(name) {
+    var showChrome = state.registered && CHROME_HIDDEN_SCREENS.indexOf(name) === -1;
+    el('appHeader').hidden = !showChrome;
+    el('tabBar').hidden = !showChrome;
+
+    var activeTab = TAB_FOR_SCREEN[name] || null;
+    var tabs = el('tabBar').querySelectorAll('.tab');
+    for (var i = 0; i < tabs.length; i++) {
+      var isActive = tabs[i].getAttribute('data-tab') === activeTab;
+      tabs[i].classList.toggle('is-active', isActive);
+      if (isActive) { tabs[i].setAttribute('aria-current', 'page'); }
+      else { tabs[i].removeAttribute('aria-current'); }
+    }
+
+    updateBellBadge();
+  }
+
+  function unreadCount() {
+    return NOTIFICATIONS.filter(function (n) {
+      return state.readNotificationIds.indexOf(n.id) === -1;
+    }).length;
+  }
+
+  function updateBellBadge() {
+    var count = state.notified ? unreadCount() : 0;
+    var badge = el('bellBadge');
+    badge.textContent = String(count);
+    badge.hidden = count === 0;
+    el('bellButton').setAttribute('aria-label', count > 0 ? 'お知らせ 未読' + count + '件' : 'お知らせ');
+  }
+
+  function markNotificationRead(id) {
+    if (state.readNotificationIds.indexOf(id) === -1) {
+      state.readNotificationIds.push(id);
+      saveState();
+    }
+    updateBellBadge();
+  }
+
+  /* ----- トースト(通知バナー) ----- */
+
+  var toastTimer = null;
+
+  function showToast(text, onTap) {
+    var toast = el('toast');
+    var button = el('toastButton');
+    button.querySelector('.toast__text').textContent = text;
+    toast.hidden = false;
+    // hidden 解除の直後にクラスを付けてスライドインさせる
+    requestAnimationFrame(function () { toast.classList.add('is-visible'); });
+    button.onclick = function () {
+      hideToast();
+      if (onTap) { onTap(); }
+    };
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 4000);
+  }
+
+  function hideToast() {
+    clearTimeout(toastTimer);
+    var toast = el('toast');
+    toast.classList.remove('is-visible');
+    setTimeout(function () { toast.hidden = true; }, 300);
+  }
+
+  /* ----- 確認シート(window.confirm は使わない) ----- */
+
+  var sheetOnConfirm = null;
+
+  function openSheet(options) {
+    el('sheetTitle').textContent = options.title;
+    el('sheetMessage').textContent = options.message;
+    var confirmButton = el('sheetConfirm');
+    confirmButton.textContent = options.confirmLabel;
+    confirmButton.classList.toggle('is-danger', options.danger === true);
+    sheetOnConfirm = options.onConfirm || null;
+    el('sheet').hidden = false;
+    el('sheetTitle').focus({ preventScroll: true });
+  }
+
+  function closeSheet() {
+    el('sheet').hidden = true;
+    sheetOnConfirm = null;
+  }
+
+  /* ----- ローディング演出 ----- */
+
+  function showLoading(text) {
+    el('loadingText').textContent = text;
+    el('loading').hidden = false;
+  }
+
+  function hideLoading() {
+    el('loading').hidden = true;
+  }
+
+  function initShell() {
+    el('bellButton').addEventListener('click', function () { showScreen('notifications'); });
+    el('sheetCancel').addEventListener('click', closeSheet);
+    el('sheetBackdrop').addEventListener('click', closeSheet);
+    el('sheetConfirm').addEventListener('click', function () {
+      var callback = sheetOnConfirm;
+      closeSheet();
+      if (callback) { callback(); }
+    });
   }
 
   /* =======================================================================
@@ -258,6 +385,7 @@
     // file:// 等の環境では history.pushState が SecurityError を投げることがある。
     // ここで例外を握りつぶし、離脱防止ガードが使えなくてもアプリ本体は起動できるようにする。
     try { installBackGuard(); } catch (e) {}
+    initShell();
 
     // data-go="画面名" を持つ要素は共通で画面遷移する
     document.addEventListener('click', function (event) {
