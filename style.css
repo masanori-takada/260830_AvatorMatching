@@ -633,3 +633,29 @@ body {
 .banner__body { flex: 1 1 auto; min-width: 0; display: block; }
 .banner__body .card-title { display: block; }
 .banner__body .text-body { display: block; font-size: 13px; }
+
+/* ==========================================================================
+   [P] プライバシー説明画面 / [F] よくある質問画面
+   ========================================================================== */
+.doc__heading { font-size: 15px; font-weight: 700; line-height: 1.5; margin: 0 0 6px; color: var(--wine); }
+
+.faq { padding: 0; }
+.faq__q {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 16px;
+  font-size: 15px; font-weight: 600; line-height: 1.5;
+  cursor: pointer;
+  list-style: none;
+}
+.faq__q::-webkit-details-marker { display: none; }
+.faq__q::after {
+  content: "";
+  flex: none;
+  width: 9px; height: 9px;
+  border-right: 2px solid var(--wine);
+  border-bottom: 2px solid var(--wine);
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform .2s ease-out;
+}
+.faq[open] .faq__q::after { transform: rotate(-135deg) translateY(-2px); }
+.faq__a { padding: 0 16px 16px; margin: 0; }
