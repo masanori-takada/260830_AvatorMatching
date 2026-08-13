@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://avatar-matching.local/contracts/ai-match.schema.json",
+  "title": "Avatar match output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["messages", "report"],
+  "properties": {
+    "messages": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["turnIndex", "speaker", "body", "answerRefs"],
+        "properties": {
+          "turnIndex": { "type": "integer", "minimum": 1 },
+          "speaker": { "enum": ["user_avatar", "candidate_avatar"] },
+          "body": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "answerRefs": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^q(0[1-9]|1[0-9]|20)$" },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["overallScore", "summary", "caution", "dimensions"],
+      "properties": {
+        "overallScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "caution": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "dimensions": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["axis", "score", "explanation", "evidenceTurnIndex"],
+            "properties": {
+              "axis": {
+                "enum": ["conversation_flow", "values_alignment", "humor_fit", "mutual_interest", "mismatch_severity"]
+              },
+              "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "explanation": { "type": "string", "minLength": 1, "maxLength": 500 },
+              "evidenceTurnIndex": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

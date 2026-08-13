@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://avatar-matching.local/contracts/ai-profile.schema.json",
+  "title": "Avatar profile output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "traits"],
+  "properties": {
+    "summary": { "type": "string", "minLength": 1, "maxLength": 600 },
+    "traits": {
+      "type": "object",
+      "minProperties": 6,
+      "maxProperties": 6,
+      "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 200 }
+    }
+  }
+}
