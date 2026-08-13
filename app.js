@@ -391,7 +391,7 @@
     });
 
     input.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter') { submitInviteCode(); }
+      if (event.key === 'Enter' && !event.isComposing) { submitInviteCode(); }
     });
 
     el('inviteSubmit').addEventListener('click', submitInviteCode);
@@ -531,8 +531,6 @@
           '<p class="hero__lead">あなたのAIアバターが相手のアバターと会話し、相性を確かめています。</p>' +
         '</div>' +
         '<div class="hero__art">' +
-          '<img class="hero__img" src="assets/hero.png" alt="" ' +
-               'onload="this.parentNode.classList.add(\'has-img\')" onerror="this.remove()">' +
           '<svg class="icon hero__icon" aria-hidden="true" focusable="false"><use href="#i-avatar-pair"></use></svg>' +
         '</div>' +
         (withHotspot ? '<span class="hero__hotspot" id="waitingHotspot" aria-hidden="true"></span>' : '') +
