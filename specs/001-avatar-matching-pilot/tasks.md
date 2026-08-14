@@ -40,9 +40,9 @@
 - [X] T019 [P] [US2] マッチ状態と完了RPCのpgTAPを `supabase/tests/database/002_match_processing.test.sql` に作成する
 - [X] T020 [US2] match、message、report、dimension、notificationスキーマ、RPC、Realtime publicationを `supabase/migrations/202608130003_matching.sql` に実装する
 - [X] T021 [US2] マッチサービスと処理Routeを `src/features/matching/server/` と `src/app/api/match-runs/[id]/process/route.ts` に実装する
-- [ ] T022 [US2] Realtime＋ポーリング状態表示を `src/features/matching/client/use-match-run.ts` と `src/app/(journey)/matching/page.tsx` に実装する
-- [ ] T023 [US2] 通知、会話ログ、5軸レポートUIを `src/app/(journey)/notifications/`、`report/`、`src/components/report/` に実装する
-- [ ] T024 [US2] 会話生成からレポート表示までを `tests/e2e/matching-report.spec.ts` で検証する
+- [X] T022 [US2] Realtime＋ポーリング状態表示を `src/features/matching/client/use-match-run.ts` と `src/app/(journey)/matching/page.tsx` に実装する
+- [X] T023 [US2] 通知、会話ログ、5軸レポートUIを `src/app/(journey)/notifications/`、`report/`、`src/components/report/` に実装する
+- [X] T024 [US2] 会話生成からレポート表示までを `tests/e2e/matching-report.spec.ts` で検証する
 
 ## Phase 5: User Story 3 - 承諾・辞退と段階的開示 (P1)
 
