@@ -33,10 +33,15 @@ export function extractSensitiveFragments(value: string): string[] {
   const candidates: string[] = [];
   const labelPattern = /(?:名前|氏名|会社|勤務先|所属|部署|住所|連絡先)\s*(?:は|:|：)?\s*([^。、,!！?？\n\r]+)/gu;
   const introductionPattern = /(?:^|[。、.!！?？])\s*([\p{L}・\s]{2,16}?)(?:と申します|といいます|と言います)/gu;
-  const nameWithCopulaPattern = /(?:^|[。、.!！?？])\s*(\p{Script=Han}{2,8})です/gu;
+  const nameWithCopulaPattern = /(?:^|[。、.!！?？])\s*([\p{Script=Han}\s・]{2,20}?)です/gu;
 
-  for (const pattern of [labelPattern, introductionPattern, nameWithCopulaPattern]) {
+  for (const pattern of [labelPattern, introductionPattern]) {
     for (const match of scrubbed.matchAll(pattern)) candidates.push(match[1] ?? "");
+  }
+  for (const match of scrubbed.matchAll(nameWithCopulaPattern)) {
+    const candidate = normalizeCandidate(match[1] ?? "");
+    const length = Array.from(candidate).length;
+    if (length >= 3 && length <= 8) candidates.push(candidate);
   }
 
   const standalone = scrubbed.trim();

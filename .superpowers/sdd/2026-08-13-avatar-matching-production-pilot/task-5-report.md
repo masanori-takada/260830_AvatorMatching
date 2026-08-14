@@ -131,6 +131,14 @@
 | production build | 公開ダミー環境変数付きNode 24、exit 0、17.8秒 |
 | pgTAP / Playwright | 本修正では未実行（既知のDocker / runner環境制約） |
 
+## Solレビュー bare名乗り境界の最小修正
+
+- RED: 句点付きの「山田 太郎です。」「山田・太郎です。」が漏洩し、「対話です」「読書です」が氏名として誤検出される4 failuresを確認しました。
+- GREEN: bare `です` patternで漢字列中のUnicode空白・中黒を許容し、NFKCとseparator除去後の候補が3〜8コードポイントの場合だけ氏名fragmentへ採用しました。
+- privacy個別1 file / 20 tests、Task 5回帰6 files / 41 testsが成功しました。label、名乗り、短いstandaloneの既存挙動も維持しています。
+- Node 24の型検査（6.6秒）、Lint（10.2秒）、公開ダミー環境変数付きproduction build（17.5秒）はすべてexit 0でした。
+- DB/pgTAP/Playwrightは変更対象外のため未実行です。
+
 ## Solレビュー PII部分一致の最終修正
 
 ### RED / GREEN

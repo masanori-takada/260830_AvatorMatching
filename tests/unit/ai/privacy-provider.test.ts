@@ -128,4 +128,27 @@ describe("PrivacySafeAiProvider", () => {
     await expect(provider.generateProfile({ answers: privateAnswers })).resolves.toBeDefined();
     expect(JSON.stringify(vi.mocked(inner.generateProfile).mock.calls[0]![0])).not.toContain(raw);
   });
+
+  it.each(["山田 太郎です。", "山田・太郎です。"])(
+    "bare名乗りの空白・中黒を除去して氏名漏洩を拒否する: %s",
+    async (raw) => {
+      const privateAnswers = answers.map((answer) => ({ ...answer }));
+      for (const index of [3, 7, 11, 17, 19]) privateAnswers[index]!.answer = "読書";
+      privateAnswers[19]!.answer = raw;
+      const provider = new PrivacySafeAiProvider(providerWith("山田太郎さんのプロフィール"));
+
+      await expect(provider.generateProfile({ answers: privateAnswers })).rejects.toThrow(
+        "自由記述由来の識別情報",
+      );
+    },
+  );
+
+  it.each(["対話です", "読書です"])("2字の一般語+ですは氏名扱いしない: %s", async (raw) => {
+    const privateAnswers = answers.map((answer) => ({ ...answer }));
+    for (const index of [3, 7, 11, 17, 19]) privateAnswers[index]!.answer = "読書";
+    privateAnswers[19]!.answer = raw;
+    const provider = new PrivacySafeAiProvider(providerWith(`${raw}を反映した安全な要約`));
+
+    await expect(provider.generateProfile({ answers: privateAnswers })).resolves.toBeDefined();
+  });
 });
