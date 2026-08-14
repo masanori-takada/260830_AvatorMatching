@@ -1,0 +1,12 @@
+.title {
+  color: var(--color-text);
+  font-size: 15px;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.copy {
+  color: var(--color-subtext);
+  font-size: 14px;
+  margin: 0;
+}
