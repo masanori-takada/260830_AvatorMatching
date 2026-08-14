@@ -1,6 +1,19 @@
 begin;
 
-select plan(6);
+select plan(12);
+
+select has_column('public', 'demo_candidates', 'created_at', 'demo_candidates.created_atがある');
+select has_column('public', 'demo_candidates', 'updated_at', 'demo_candidates.updated_atがある');
+select has_trigger(
+  'public', 'demo_candidates', 'demo_candidates_set_updated_at',
+  'demo_candidatesにupdated_at triggerがある'
+);
+select has_column('public', 'candidate_reveals', 'created_at', 'candidate_reveals.created_atがある');
+select has_column('public', 'candidate_reveals', 'updated_at', 'candidate_reveals.updated_atがある');
+select has_trigger(
+  'public', 'candidate_reveals', 'candidate_reveals_set_updated_at',
+  'candidate_revealsにupdated_at triggerがある'
+);
 
 insert into public.demo_candidates (id, avatar_alias, conversation_profile, active)
 values

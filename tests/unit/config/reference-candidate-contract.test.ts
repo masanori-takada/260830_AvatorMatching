@@ -9,6 +9,22 @@ const migrationPath = resolve(
 const seedPath = resolve(process.cwd(), "supabase/seed.sql");
 
 describe("架空候補のDB契約", () => {
+  it("両テーブルが共通timestampとupdated_at triggerを持つ", () => {
+    const sql = readFileSync(migrationPath, "utf8");
+
+    for (const table of ["demo_candidates", "candidate_reveals"]) {
+      const definition = sql.match(
+        new RegExp(`create table public\\.${table} \\(([\\s\\S]*?)\\n\\);`, "i"),
+      )?.[1];
+      expect(definition).toMatch(/created_at timestamptz not null default now\(\)/i);
+      expect(definition).toMatch(/updated_at timestamptz not null default now\(\)/i);
+      expect(sql).toMatch(new RegExp(
+        `create trigger ${table}_set_updated_at[\\s\\S]*?before update on public\\.${table}[\\s\\S]*?execute function public\\.set_updated_at\\(\\)`,
+        "i",
+      ));
+    }
+  });
+
   it("activeな匿名プロフィールだけをauthenticatedへ公開する", () => {
     const sql = readFileSync(migrationPath, "utf8");
 

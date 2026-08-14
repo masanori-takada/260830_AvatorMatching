@@ -14,7 +14,9 @@ create table public.demo_candidates (
       'location'
     ]
   ),
-  active boolean not null default true
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table public.candidate_reveals (
@@ -22,8 +24,20 @@ create table public.candidate_reveals (
   full_name text not null check (char_length(full_name) between 1 and 100),
   company text not null check (char_length(company) between 1 and 200),
   department text not null check (char_length(department) between 1 and 200),
-  bio text not null check (char_length(bio) between 1 and 500)
+  bio text not null check (char_length(bio) between 1 and 500),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+
+create trigger demo_candidates_set_updated_at
+before update on public.demo_candidates
+for each row
+execute function public.set_updated_at();
+
+create trigger candidate_reveals_set_updated_at
+before update on public.candidate_reveals
+for each row
+execute function public.set_updated_at();
 
 alter table public.demo_candidates enable row level security;
 alter table public.demo_candidates force row level security;

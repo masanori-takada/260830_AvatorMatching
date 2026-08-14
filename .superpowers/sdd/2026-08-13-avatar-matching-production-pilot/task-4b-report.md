@@ -43,3 +43,11 @@ T006の残件だった固定架空候補1件を実装しました。既存の質
 
 - 実DB上のRLSと権限はpgTAPで契約化済みですが、この環境ではDockerが使えないため実行確認が残っています。
 - 将来の開示RPC実装時も、`candidate_reveals`への直接SELECT grant/policyを追加しないでください。
+
+## Solレビュー修正: 共通timestamp規約
+
+- RED: 両テーブルの`created_at` / `updated_at`とtriggerを要求する静的契約を追加し、`created_at`欠落で1 test failedを確認しました。
+- GREEN: `demo_candidates`と`candidate_reveals`へ`created_at timestamptz not null default now()`、`updated_at timestamptz not null default now()`を追加しました。
+- 両テーブルのbefore update triggerは、foundationで定義済みの`public.set_updated_at()`を再利用します。
+- pgTAPへ4列と2 triggerの6 assertionsを追加し、合計12 assertionsにしました。Docker未導入のため実DB実行は未実施です。
+- 修正後ゲート: 静的契約1 file / 4 tests、型検査、Lint、公開ダミー環境変数付きproduction buildはすべてexit 0でした。
