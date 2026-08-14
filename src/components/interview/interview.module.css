@@ -1,0 +1,146 @@
+.headingRow {
+  align-items: baseline;
+  display: flex;
+  gap: var(--space-8);
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 20px;
+  line-height: 1.35;
+  margin: var(--space-8) 0 var(--space-6);
+}
+
+.count {
+  color: var(--color-wine);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.track {
+  background: var(--color-track);
+  border-radius: var(--radius-pill);
+  height: 6px;
+  overflow: hidden;
+}
+
+.fill {
+  background: linear-gradient(90deg, var(--color-wine), var(--color-pink));
+  border-radius: var(--radius-pill);
+  height: 100%;
+  transition: width 0.4s ease-out;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  margin-top: var(--space-18);
+}
+
+.category {
+  color: var(--color-subtext);
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.prompt {
+  align-self: flex-start;
+  background: var(--color-pink-soft);
+  border-bottom-left-radius: var(--space-6);
+  border-radius: var(--space-16);
+  line-height: 1.7;
+  margin: 0;
+  max-width: 78%;
+  padding: var(--space-10) var(--space-14);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.choiceForm,
+.choiceList,
+.textForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.choice {
+  background: var(--color-card);
+  border: 1px solid var(--color-wine);
+  border-radius: var(--radius-button);
+  color: var(--color-wine);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 48px;
+  padding: var(--space-12) var(--space-14);
+  text-align: left;
+  width: 100%;
+}
+
+.choice[data-selected="true"] {
+  background: var(--color-pink-soft);
+}
+
+.textarea {
+  background: var(--color-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-button);
+  color: var(--color-text);
+  min-height: 112px;
+  padding: var(--space-10) var(--space-14);
+  resize: vertical;
+  width: 100%;
+}
+
+.send,
+.startButton {
+  background: var(--color-wine);
+  border: 0;
+  border-radius: var(--radius-button);
+  color: var(--color-card);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  min-height: 50px;
+  padding: var(--space-8) var(--space-16);
+  width: 100%;
+}
+
+.choice:active,
+.send:active,
+.startButton:active {
+  background: var(--color-wine-deep);
+  color: var(--color-card);
+}
+
+.hint,
+.copy {
+  color: var(--color-subtext);
+  font-size: 12px;
+  margin: 0;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 12px;
+  margin: var(--space-12) 0 0;
+}
+
+.start,
+.complete {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding-top: var(--space-24);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+}

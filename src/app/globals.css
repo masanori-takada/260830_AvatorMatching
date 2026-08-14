@@ -11,6 +11,9 @@
   --color-text: #2e2a2c;
   --color-subtext: #6e6469;
   --color-border: #efe6ea;
+  --color-track: #f0eaed;
+  --color-disabled: #d8c6ce;
+  --color-danger: #c0392b;
   --color-stage: #e8e4e6;
   --color-overlay-veil: rgb(247 243 244 / 94%);
   --phone-max-width: 390px;
@@ -27,6 +30,7 @@
   --space-12: 12px;
   --space-14: 14px;
   --space-16: 16px;
+  --space-18: 18px;
   --space-22: 22px;
   --space-24: 24px;
   --space-28: 28px;
@@ -52,6 +56,12 @@ body {
   line-height: 1.7;
   letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;
+}
+
+button,
+a,
+textarea {
+  font: inherit;
 }
 
 button,
