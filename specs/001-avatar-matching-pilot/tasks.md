@@ -28,7 +28,7 @@
 - [X] T012 [P] [US1] 質問・回答スキーマの失敗テストを `tests/unit/interview/schemas.test.ts` に作成する
 - [X] T013 [P] [US1] 回答保存・完了Actionの統合テストを `tests/integration/interview/actions.test.ts` に作成する
 - [X] T014 [US1] 質問・回答ドメインとActionを `src/features/interview/domain.ts`、`schemas.ts`、`server/queries.ts`、`server/actions.ts` に実装する
-- [ ] T015 [US1] 決定論的アバター要約を `src/lib/ai/provider.ts`、`schemas.ts`、`mock-provider.ts` と `src/features/avatar-profile/server/service.ts` に実装する
+- [X] T015 [US1] 決定論的アバター要約を `src/lib/ai/provider.ts`、`schemas.ts`、`mock-provider.ts` と `src/features/avatar-profile/server/service.ts` に実装する
 - [X] T016 [US1] 開始、質問、完了画面を `src/app/(journey)/start/`、`interview/[order]/`、`interview/complete/` と `src/components/interview/` に実装する
 - [X] T017 [US1] 20問完了フローを `tests/e2e/interview.spec.ts` に実装し、選択15問・自由記述5問・空白拒否を検証する
 
@@ -36,7 +36,7 @@
 
 **Independent Test**: 完了回答から処理を開始し、通知、8以上の発言、5軸と引用根拠を表示する。
 
-- [ ] T018 [P] [US2] 要約・マッチ出力契約テストを `tests/unit/ai/mock-provider.test.ts`、`tests/contract/ai-profile.test.ts`、`tests/contract/ai-match.test.ts` に作成する
+- [X] T018 [P] [US2] 要約・マッチ出力契約テストを `tests/unit/ai/mock-provider.test.ts`、`tests/contract/ai-profile.test.ts`、`tests/contract/ai-match.test.ts` に作成する
 - [ ] T019 [P] [US2] マッチ状態と完了RPCのpgTAPを `supabase/tests/database/002_match_processing.test.sql` に作成する
 - [ ] T020 [US2] match、message、report、dimension、notificationスキーマ、RPC、Realtime publicationを `supabase/migrations/202608130003_matching.sql` に実装する
 - [ ] T021 [US2] マッチサービスと処理Routeを `src/features/matching/server/` と `src/app/api/match-runs/[id]/process/route.ts` に実装する
