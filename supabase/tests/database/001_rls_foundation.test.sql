@@ -20,6 +20,7 @@ select is(
 select throws_ok(
   $$delete from public.profiles where id = tests.get_supabase_uid('user_a')$$,
   '42501',
+  null,
   '他利用者のprofileを削除できない'
 );
 

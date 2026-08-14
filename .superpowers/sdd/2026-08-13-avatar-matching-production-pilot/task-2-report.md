@@ -62,3 +62,33 @@
 
 - Docker未導入のため、pgTAPのヘルパー互換性、トリガー、RLSポリシーの実DB挙動は未検証である。
 - ホスト済み開発プロジェクトを使う場合も、本番へ直接適用せず、Anonymous Sign-insをDashboardで有効化してからmigrationとDBテストを実行する。
+
+## Fix round 1
+
+### 変更
+
+- `throws_ok` を4引数形式へ修正し、SQLSTATE `42501`、期待メッセージなし、説明文を明確に分離した。これにより説明文を誤って期待エラーメッセージとして比較しない。
+- pgTAP helperの利用者作成をemailベースから、`tests.anonymous_users` のテスト名→UUID対応へ変更した。
+- 匿名利用者行は `auth.users.is_anonymous = true`、emailなし、`provider = anonymous`、`providers = [anonymous]` のapp metadataを持つ。`auth.identities` へemail identityは作成しない。
+- JWT切替helperは `sub`、`role = authenticated`、`is_anonymous = true` を設定する。
+
+### 対象ファイル
+
+- `supabase/tests/database/000_test_helpers.sql`
+- `supabase/tests/database/001_rls_foundation.test.sql`
+- `.superpowers/sdd/2026-08-13-avatar-matching-production-pilot/task-2-report.md`
+
+### コマンドと結果
+
+- RED確認: `pnpm test:db` を実行したが、sandboxではNode起動前に `EPERM: operation not permitted, lstat 'C:\Users\ユーザー'` で停止した。Docker未導入のため、SQL/pgTAPのRED/GREENはいずれも実DBでは観測できない。
+- 静的検証: `git diff --check` は成功した。
+- 権限付き `pnpm lint`: 成功、exit 0。
+- 権限付き `pnpm typecheck`: 成功、exit 0。
+- 権限付き `pnpm test`: 成功、7 file / 13 test。
+- 権限付き `pnpm test:db`: `$ supabase test db` 起動後に `LegacyDbConnectError`、`ECONNREFUSED 127.0.0.1:54322`、exit 1。Docker未導入のためSQL/pgTAPは未検証であり、PASSではない。
+
+### セルフレビュー
+
+- `throws_ok` の第3引数を `null` とし、pgTAP 1.3.4で説明付きSQLSTATE検証に必要な4引数契約へ合わせた。
+- 匿名利用者のテストデータはemail/identityを作らず、匿名固有フラグとprovider metadata、JWT claimを一貫して持つ。
+- `role` は匿名ユーザーにも適用される `authenticated` のままであり、`anon` roleやservice roleを使っていない。
