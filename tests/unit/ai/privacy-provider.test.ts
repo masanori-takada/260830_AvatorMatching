@@ -95,4 +95,29 @@ describe("PrivacySafeAiProvider", () => {
       candidate: { avatarAlias: "ルナ", conversationProfile: {} },
     })).rejects.toThrow("自由記述由来の識別情報");
   });
+
+  it.each([
+    ["休日は読書で、名前は山田太郎です", "山田太郎さん"],
+    ["休日は読書で、名前は山 田・太 郎です", "山・田 太郎さん"],
+    ["休日は読書で、名前はＡＢＣＤです", "ABCDさん"],
+  ])("正規化後の連続部分一致で識別断片の漏洩を拒否する: %s", async (raw, leaked) => {
+    const privateAnswers = answers.map((answer) => ({ ...answer }));
+    for (const index of [3, 7, 11, 17, 19]) privateAnswers[index]!.answer = "読書";
+    privateAnswers[19]!.answer = raw;
+    const provider = new PrivacySafeAiProvider(providerWith(`要約: ${leaked}`));
+
+    await expect(provider.generateProfile({ answers: privateAnswers })).rejects.toThrow(
+      "自由記述由来の識別情報",
+    );
+  });
+
+  it("4文字未満の短文はrawを渡さず、一般語との偶然一致だけでは拒否しない", async () => {
+    const privateAnswers = answers.map((answer) => ({ ...answer }));
+    privateAnswers[19]!.answer = "読書";
+    const inner = providerWith("読書も含む一般的な趣味の要約です。");
+    const provider = new PrivacySafeAiProvider(inner);
+
+    await expect(provider.generateProfile({ answers: privateAnswers })).resolves.toBeDefined();
+    expect(JSON.stringify(vi.mocked(inner.generateProfile).mock.calls[0]![0])).not.toContain("読書");
+  });
 });

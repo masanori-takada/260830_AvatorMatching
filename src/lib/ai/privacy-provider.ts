@@ -1,5 +1,5 @@
 import { INTERVIEW_QUESTIONS } from "@/features/interview/domain";
-import { avatarProfileOutputSchema, matchOutputSchema } from "@/lib/ai/schemas";
+import { avatarProfileOutputSchema, matchOutputSchema, redactPotentialPii } from "@/lib/ai/schemas";
 import type {
   AiAnswer,
   AiProvider,
@@ -22,12 +22,16 @@ function normalizeForComparison(value: string): string {
 }
 
 function identifyingFragments(value: string): string[] {
-  const normalized = normalizeForComparison(value);
-  const withoutIntroduction = normalized
-    .replace(/^(?:私は|わたしは|名前は)/u, "")
-    .replace(/(?:という名前です|と申します|といいます|と言います|です)$/u, "");
+  // email・電話などの定型識別子は出力schemaの専用patternで検査し、machine enumとの偶然一致を避ける。
+  if (redactPotentialPii(value) !== value) return [];
+  const codePoints = Array.from(normalizeForComparison(value));
+  if (codePoints.length < 4) return [];
 
-  return [...new Set([normalized, withoutIntroduction])].filter((fragment) => fragment.length >= 4);
+  const fragments = Array.from(
+    { length: codePoints.length - 3 },
+    (_, index) => codePoints.slice(index, index + 4).join(""),
+  );
+  return [...new Set(fragments)];
 }
 
 function outputStrings(value: unknown): string[] {

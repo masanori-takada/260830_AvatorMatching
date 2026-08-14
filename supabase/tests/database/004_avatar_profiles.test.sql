@@ -1,11 +1,29 @@
 begin;
 
-select plan(6);
+select plan(8);
 
 select tests.create_supabase_user('profile_user_a');
 select tests.create_supabase_user('profile_user_b');
 
 select has_column('public', 'avatar_profiles', 'source_revision', 'source_revision列がある');
+select is(
+  has_function_privilege(
+    'anon',
+    'public.upsert_my_avatar_profile(text,jsonb,integer,text)',
+    'EXECUTE'
+  ),
+  false,
+  'anonはavatar profile RPCを実行できない'
+);
+select is(
+  has_function_privilege(
+    'authenticated',
+    'public.upsert_my_avatar_profile(text,jsonb,integer,text)',
+    'EXECUTE'
+  ),
+  true,
+  'authenticatedはavatar profile RPCを実行できる'
+);
 
 set local role authenticated;
 select tests.authenticate_as('profile_user_a');

@@ -30,4 +30,15 @@ describe("avatar_profiles DB契約", () => {
     expect(sql).toMatch(/revoke all on function public\.upsert_my_avatar_profile[^;]+from public, anon/i);
     expect(sql).toMatch(/grant execute on function public\.upsert_my_avatar_profile[^;]+to authenticated/i);
   });
+
+  it("pgTAPでRPCのanon拒否とauthenticated許可を検証する", () => {
+    const sql = readFileSync(resolve(
+      process.cwd(),
+      "supabase/tests/database/004_avatar_profiles.test.sql",
+    ), "utf8");
+
+    expect(sql).toMatch(/select plan\(8\)/i);
+    expect(sql).toMatch(/has_function_privilege\(\s*'anon',\s*'public\.upsert_my_avatar_profile\(text,jsonb,integer,text\)',\s*'execute'\s*\)[\s\S]*false/i);
+    expect(sql).toMatch(/has_function_privilege\(\s*'authenticated',\s*'public\.upsert_my_avatar_profile\(text,jsonb,integer,text\)',\s*'execute'\s*\)[\s\S]*true/i);
+  });
 });

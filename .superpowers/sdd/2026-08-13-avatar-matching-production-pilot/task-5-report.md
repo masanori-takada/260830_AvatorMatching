@@ -105,3 +105,27 @@
 | Lint | Node 24、exit 0、11.7秒 |
 | production build | 公開ダミー環境変数付きNode 24、exit 0、18.6秒 |
 | pgTAP / Playwright | 既知のDocker / runner環境制約により未実行 |
+
+## Solレビュー PII部分一致の最終修正
+
+### RED / GREEN
+
+- RED: 文中の実名部分だけを出力する3ケース（通常表記、空白/中黒混在、NFKC表記）が既存の全文一致検査を通過することを、各ケース独立fixtureで確認しました。pgTAP権限契約は`plan(6)`のため静的テストが失敗しました。
+- GREEN: Node 24で対象2 files / 12 tests、回帰範囲6 files / 31 testsがすべて成功しました。
+
+### 修正内容と方針
+
+- 自由記述をNFKC正規化し、Unicode空白・句読点・記号を除去したコードポイント列から連続4文字n-gramを生成します。出力の全文字列も同じ正規化を行い、1件でも部分一致すればfail-closedします。
+- email・電話など既存の定型PII patternに該当する入力はn-gramへ混ぜず、出力Zodの専用patternへ委譲します。これによりemailの`user`とmachine enumの`user_avatar`のような偽陽性を防ぎます。
+- 4文字未満の自由文はn-gramを生成しません。raw入力をProviderへ渡さない一次防御と既存PII patternは維持しつつ、「読書」など短い一般語の偶然一致で出力全体を拒否しない方針をテストしました。
+- pgTAPを8 assertionsへ同期し、`public.upsert_my_avatar_profile(text,jsonb,integer,text)`についてanonのEXECUTEがfalse、authenticatedがtrueであることを追加しました。
+
+### 最終ゲート
+
+| 検証 | 結果 |
+| --- | --- |
+| 対象 / 回帰テスト | 2 files / 12 tests、6 files / 31 tests、exit 0 |
+| 型検査 | Node 24、exit 0、9秒 |
+| Lint | Node 24、exit 0、31.9秒 |
+| production build | 公開ダミー環境変数付きNode 24、exit 0、19.3秒 |
+| pgTAP / Playwright | 既知のDocker / runner環境制約により未実行 |
