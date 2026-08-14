@@ -38,7 +38,7 @@ function providerWith(summary = safeProfile.summary, matchBody?: string): AiProv
         body: index === 0 && matchBody
           ? matchBody
           : index < 3 ? `選択回答${index + 1}` : `安全な発言${index + 1}`,
-        answerRefs: index < 3 ? [`q0${index + 1}`] : [],
+        answerRefs: [`q0${index % 3 + 1}`],
       })),
       report: {
         overallScore: 70, summary: "安全な要約", caution: "安全に対話してください。",

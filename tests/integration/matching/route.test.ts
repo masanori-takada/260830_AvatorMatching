@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 
 const { processOwnedMatch } = vi.hoisted(() => ({ processOwnedMatch: vi.fn() }));
 vi.mock("@/features/matching/server/process", () => ({ processOwnedMatch }));
@@ -11,7 +10,7 @@ describe("match processing route", () => {
 
   it.each([
     [new Error("STATE_CONFLICT"), 409],
-    [(() => { try { z.object({ ok: z.string() }).parse({}); } catch (error) { return error as Error; } })(), 422],
+    [new Error("INVALID_OUTPUT"), 422],
     [new Error("provider unavailable"), 500],
   ])("内部情報を返さず処理エラーをHTTPへ写像する", async (error, expectedStatus) => {
     processOwnedMatch.mockRejectedValue(error);

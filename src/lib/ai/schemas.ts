@@ -69,7 +69,7 @@ export const matchOutputSchema = z.strictObject({
     turnIndex: z.number().int().min(1),
     speaker: z.enum(["user_avatar", "candidate_avatar"]),
     body: z.string().min(1).max(1000),
-    answerRefs: z.array(z.string().regex(/^q(?:0[1-9]|1[0-9]|20)$/)).refine(
+    answerRefs: z.array(z.string().regex(/^q(?:0[1-9]|1[0-9]|20)$/)).min(1).refine(
       (refs) => new Set(refs).size === refs.length,
       "answerRefsは発言内で重複できません。",
     ),

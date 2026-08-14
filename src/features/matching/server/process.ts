@@ -27,7 +27,9 @@ export async function processOwnedMatch(matchRunId: string): Promise<"completed"
     if (completeError) throw completeError;
     return "completed";
   } catch (error) {
-    const errorCode = error instanceof ZodError ? "INVALID_OUTPUT" : "PROVIDER_ERROR";
+    const isInvalidOutput = error instanceof ZodError
+      || (error instanceof Error && error.message.includes("INVALID_OUTPUT"));
+    const errorCode = isInvalidOutput ? "INVALID_OUTPUT" : "PROVIDER_ERROR";
     const { error: failError } = await client.rpc("fail_match_run", {
       p_match_run_id: matchRunId,
       p_error_code: errorCode,
@@ -38,6 +40,7 @@ export async function processOwnedMatch(matchRunId: string): Promise<"completed"
       errorName: error instanceof Error ? error.name : "UnknownError",
       failErrorCode: failError?.code,
     });
+    if (isInvalidOutput) throw new Error("INVALID_OUTPUT", { cause: error });
     throw error;
   }
 }

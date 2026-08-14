@@ -20,7 +20,7 @@ const output = {
     turnIndex: index + 1,
     speaker: index % 2 === 0 ? "user_avatar" as const : "candidate_avatar" as const,
     body: `安全な発言${index + 1}`,
-    answerRefs: index < 3 ? [`q0${index + 1}`] : [],
+    answerRefs: [`q0${index % 3 + 1}`],
   })),
   report: {
     overallScore: 75,
@@ -69,6 +69,21 @@ describe("processOwnedMatch", () => {
     await expect(processOwnedMatch("11111111-1111-4111-8111-111111111111")).rejects.toThrow();
     expect(rpc).toHaveBeenLastCalledWith("fail_match_run", {
       p_match_run_id: "11111111-1111-4111-8111-111111111111", p_error_code: "PROVIDER_ERROR",
+    });
+  });
+
+  it("providerの空answerRefs出力をINVALID_OUTPUTとしてfailする", async () => {
+    generateMatch.mockResolvedValue({
+      ...output,
+      messages: output.messages.map((message, index) => index === 0
+        ? { ...message, answerRefs: [] }
+        : message),
+    });
+
+    await expect(processOwnedMatch("11111111-1111-4111-8111-111111111111"))
+      .rejects.toThrow("INVALID_OUTPUT");
+    expect(rpc).toHaveBeenLastCalledWith("fail_match_run", {
+      p_match_run_id: "11111111-1111-4111-8111-111111111111", p_error_code: "INVALID_OUTPUT",
     });
   });
 });

@@ -56,3 +56,11 @@
 - pgTAPは24 assertionsへ拡張し、他ownerのclaim/complete拒否、stale profileとrun作成0、`answerRefs`欠落/null/非array/empty、invalid後の部分書込0、failed再試行とattempt 3上限、completed再実行の冪等性を契約化しました。
 - 並行completeは実DBで同時実行できていませんが、owner一致を含む対象run行の`FOR UPDATE`、reportの`match_run_id unique`、dimensionの`(report_id, axis) unique`、単一RPC transactionにより直列化と重複防止を静的確認しました。
 - pgTAP実行はDocker未導入の既知制約により未実行です。実行可能環境では`pnpm test:db`による確認が必要です。Playwrightは本限定修正の対象外です。
+
+## AI出力エラー分類の限定修正（2026-08-15）
+
+- RED: 空`answerRefs`、processの失敗分類、RouteのHTTP写像について3 files / 3 failed / 5 passedを確認しました。JSON Schema同期は`minItems`未定義により1 failed / 1 passedでした。
+- GREEN: AI＋Task 6回帰は8 files / 46 tests passed（exit 0、26.1秒）です。型検査（16.9秒）、Lint（24.5秒）、環境変数付きproduction build（25.9秒）もNode 24でexit 0でした。
+- `answerRefs`はZod、JSON Schema、DBの全境界で1件以上を必須としました。`specs/001-avatar-matching-pilot/contracts/ai-match.schema.json`にも`minItems: 1`を追加し、同期契約テストで保護しています。
+- Provider出力のZod検証失敗とDBの`INVALID_OUTPUT`は、安全な`INVALID_OUTPUT`へ正規化して`fail_match_run`へ渡し、Routeは422を返します。ネットワーク障害など予期しないProvider失敗だけを`PROVIDER_ERROR`として記録し、Routeは500を返します。
+- pgTAPとPlaywrightは前節と同じ理由で未実行です。本修正の挙動はunit/contract/integrationで検証しました。
