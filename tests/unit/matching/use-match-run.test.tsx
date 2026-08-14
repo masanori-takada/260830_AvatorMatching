@@ -13,6 +13,7 @@ describe("useMatchRun", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    createBrowserSupabaseClient.mockClear();
     removeChannel.mockReset();
     const channel = {
       on: vi.fn((_event, _filter, handler) => { realtimeHandler = handler; return channel; }),
@@ -46,5 +47,29 @@ describe("useMatchRun", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(28_000); });
     expect(result.current.status).toBe("timed_out");
     expect(removeChannel).toHaveBeenCalledOnce();
+  });
+
+  it("failedからrestartするとprocessingで再購読しtimeoutを張り直す", async () => {
+    const { result } = renderHook(() => useMatchRun({
+      matchRunId: "run-1", initialStatus: "failed", timeoutMs: 30_000,
+    }));
+    expect(createBrowserSupabaseClient).not.toHaveBeenCalled();
+    act(() => result.current.restart());
+    expect(result.current.status).toBe("processing");
+    expect(createBrowserSupabaseClient).toHaveBeenCalledOnce();
+    await act(async () => { await vi.advanceTimersByTimeAsync(29_999); });
+    expect(result.current.status).toBe("processing");
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(result.current.status).toBe("timed_out");
+  });
+
+  it("連続restartで前世代をcleanupしchannelとintervalを重複させない", () => {
+    const { result } = renderHook(() => useMatchRun({
+      matchRunId: "run-1", initialStatus: "failed", timeoutMs: 30_000,
+    }));
+    act(() => result.current.restart());
+    act(() => result.current.restart());
+    expect(createBrowserSupabaseClient).toHaveBeenCalledTimes(2);
+    expect(removeChannel).toHaveBeenCalledTimes(1);
   });
 });

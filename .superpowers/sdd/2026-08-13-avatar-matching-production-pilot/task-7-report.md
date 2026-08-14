@@ -44,3 +44,24 @@
 
 - E2Eとmigrationは実行環境が整い次第、それぞれPlaywright runnerと`pnpm test:db`で確認が必要です。
 - 開示・承諾/辞退UIはTask 8の責務として先取りしていません。
+
+## Solレビュー限定修正
+
+- RED: `MatchingProgress`の再試行、POST直後のcompleted反映、HTTP失敗反映を追加し、3 testsすべて期待どおり失敗しました。`useMatchRun`のfailed再開と連続再開cleanup、および0035 migration契約もREDから開始しました。
+- GREEN: `useMatchRun`にgeneration単位の`restart`を追加しました。failed/timed_outから即processingへ戻り、Realtime購読、2秒poll、30秒timeoutを作り直します。再開時にはReact effect cleanupが旧channelとtimerを破棄するため、重複監視を残しません。
+- `MatchingProgress`は再試行前に監視を再開し、process RouteのJSON statusがcompletedなら即完了導線、queued/processingなら監視継続、HTTP・通信・不正JSON・failedなら失敗表示へ写像します。
+- 通知既読migrationをmatching 003より後、将来004/005より前の`2026081300035_notification_read.sql`へ移動しました。
+- pgTAPはplan 29へ同期し、RPCのanon EXECUTE拒否、authenticated EXECUTE許可、owner既読成功、同通知2回既読の時刻不変、他owner拒否の5 assertionsを追加しました。
+
+### 限定修正の検証
+
+| 検証 | 結果 |
+| --- | --- |
+| 対象GREEN | 3 files / 8 tests、exit 0、13.6秒 |
+| Task 7回帰 | 9 files / 23 tests、exit 0、31.4秒 |
+| 型検査 | Node 24、exit 0、5.2秒 |
+| Lint | Node 24、exit 0、9.3秒 |
+| production build | 公開ダミー環境変数付きNode 24、exit 0、25.3秒 |
+| Playwright / DB | 既知のrunner停止 / Docker未導入のため未実行 |
+
+pgTAPの追加契約は静的テストで確認済みですが、RLSと権限の実挙動はDocker環境で`pnpm test:db`を再確認する必要があります。

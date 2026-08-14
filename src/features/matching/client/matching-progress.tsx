@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { useMatchRun } from "./use-match-run";
 import styles from "./matching-progress.module.css";
@@ -10,20 +10,31 @@ export function MatchingProgress({ matchRunId, initialStatus }: {
   matchRunId: string;
   initialStatus: "queued" | "processing" | "completed" | "failed";
 }) {
-  const { status } = useMatchRun({ matchRunId, initialStatus });
+  const { status, restart, applyProcessStatus } = useMatchRun({ matchRunId, initialStatus });
   const requested = useRef(false);
-  const [requestError, setRequestError] = useState(false);
 
-  const processMatch = useCallback(async () => {
+  const processMatch = useCallback(async (restartMonitoring = false) => {
     if (requested.current) return;
     requested.current = true;
+    if (restartMonitoring) restart();
     try {
       const response = await fetch(`/api/match-runs/${matchRunId}/process`, { method: "POST" });
-      if (!response.ok) setRequestError(true);
+      if (!response.ok) {
+        applyProcessStatus("failed");
+        return;
+      }
+      const payload = await response.json() as { status?: unknown };
+      if (["queued", "processing", "completed", "failed"].includes(String(payload.status))) {
+        applyProcessStatus(payload.status as "queued" | "processing" | "completed" | "failed");
+      } else {
+        applyProcessStatus("failed");
+      }
     } catch {
-      setRequestError(true);
+      applyProcessStatus("failed");
+    } finally {
+      requested.current = false;
     }
-  }, [matchRunId]);
+  }, [applyProcessStatus, matchRunId, restart]);
 
   useEffect(() => {
     if (initialStatus !== "queued") return;
@@ -32,15 +43,13 @@ export function MatchingProgress({ matchRunId, initialStatus }: {
   }, [initialStatus, processMatch]);
 
   function retry() {
-    requested.current = false;
-    setRequestError(false);
-    void processMatch();
+    void processMatch(true);
   }
 
   if (status === "completed") {
     return <Link className={styles.primary} href={`/report?matchRunId=${matchRunId}`}>相性レポートを見る</Link>;
   }
-  const failed = status === "failed" || status === "timed_out" || requestError;
+  const failed = status === "failed" || status === "timed_out";
   return (
     <div className={styles.stack}>
       <section aria-live="polite" className={styles.card}>

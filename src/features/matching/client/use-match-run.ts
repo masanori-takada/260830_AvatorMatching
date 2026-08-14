@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -15,9 +15,23 @@ type UseMatchRunInput = {
 export function useMatchRun({ matchRunId, initialStatus, timeoutMs = 30_000 }: UseMatchRunInput) {
   const [status, setStatus] = useState<MatchViewStatus>(initialStatus);
   const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [generation, setGeneration] = useState<number | null>(
+    initialStatus === "completed" || initialStatus === "failed" ? null : 0,
+  );
+
+  const restart = useCallback(() => {
+    setStatus("processing");
+    setErrorCode(null);
+    setGeneration((current) => current === null ? 0 : current + 1);
+  }, []);
+
+  const applyProcessStatus = useCallback((next: "queued" | "processing" | "completed" | "failed") => {
+    setStatus(next);
+    if (next === "completed" || next === "failed") setGeneration(null);
+  }, []);
 
   useEffect(() => {
-    if (initialStatus === "completed" || initialStatus === "failed") return;
+    if (generation === null) return;
     const client = createBrowserSupabaseClient();
     let stopped = false;
     let pollTimer: ReturnType<typeof setInterval> | undefined;
@@ -58,7 +72,13 @@ export function useMatchRun({ matchRunId, initialStatus, timeoutMs = 30_000 }: U
     }, timeoutMs);
 
     return stop;
-  }, [initialStatus, matchRunId, timeoutMs]);
+  }, [generation, matchRunId, timeoutMs]);
 
-  return { status, errorCode, retryable: status === "failed" || status === "timed_out" };
+  return {
+    status,
+    errorCode,
+    retryable: status === "failed" || status === "timed_out",
+    restart,
+    applyProcessStatus,
+  };
 }

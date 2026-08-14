@@ -1,5 +1,5 @@
 begin;
-select plan(24);
+select plan(29);
 
 select tests.create_supabase_user('match_owner');
 select tests.create_supabase_user('match_other');
@@ -87,6 +87,24 @@ select is((select count(*) from public.compatibility_dimensions), 5::bigint, '5�
 select is((select count(*) from public.notifications where match_run_id = :'run_id'), 2::bigint, '通知2件を確定する');
 select public.complete_match_run(:'run_id', '{}'::jsonb);
 select is((select count(*) from public.compatibility_dimensions), 5::bigint, 'complete再実行でも5軸を維持する');
+
+select ok(
+  not has_function_privilege('anon', 'public.mark_notification_read(uuid)', 'EXECUTE'),
+  'anonは既読RPCを実行できない'
+);
+select ok(
+  has_function_privilege('authenticated', 'public.mark_notification_read(uuid)', 'EXECUTE'),
+  'authenticatedは既読RPCを実行できる'
+);
+select id as notification_id from public.notifications where match_run_id = :'run_id' order by kind limit 1 \gset
+select public.mark_notification_read(:'notification_id') as first_read_at \gset
+select isnt(:'first_read_at'::timestamptz, null::timestamptz, 'ownerは通知を既読にできる');
+select is(public.mark_notification_read(:'notification_id'), :'first_read_at'::timestamptz, '既読再実行は同じ時刻を返す');
+select tests.authenticate_as('match_other');
+select throws_ok(
+  format('select public.mark_notification_read(%L)', :'notification_id'),
+  'P0002', 'NOTIFICATION_NOT_FOUND', '他ownerは通知を既読にできない'
+);
 
 select tests.authenticate_as('stale_owner');
 select throws_ok('select public.start_match_run()', 'P0001', 'STALE_PROFILE', '古いプロフィールでは開始しない');
