@@ -37,9 +37,9 @@
 **Independent Test**: 完了回答から処理を開始し、通知、8以上の発言、5軸と引用根拠を表示する。
 
 - [X] T018 [P] [US2] 要約・マッチ出力契約テストを `tests/unit/ai/mock-provider.test.ts`、`tests/contract/ai-profile.test.ts`、`tests/contract/ai-match.test.ts` に作成する
-- [ ] T019 [P] [US2] マッチ状態と完了RPCのpgTAPを `supabase/tests/database/002_match_processing.test.sql` に作成する
-- [ ] T020 [US2] match、message、report、dimension、notificationスキーマ、RPC、Realtime publicationを `supabase/migrations/202608130003_matching.sql` に実装する
-- [ ] T021 [US2] マッチサービスと処理Routeを `src/features/matching/server/` と `src/app/api/match-runs/[id]/process/route.ts` に実装する
+- [X] T019 [P] [US2] マッチ状態と完了RPCのpgTAPを `supabase/tests/database/002_match_processing.test.sql` に作成する
+- [X] T020 [US2] match、message、report、dimension、notificationスキーマ、RPC、Realtime publicationを `supabase/migrations/202608130003_matching.sql` に実装する
+- [X] T021 [US2] マッチサービスと処理Routeを `src/features/matching/server/` と `src/app/api/match-runs/[id]/process/route.ts` に実装する
 - [ ] T022 [US2] Realtime＋ポーリング状態表示を `src/features/matching/client/use-match-run.ts` と `src/app/(journey)/matching/page.tsx` に実装する
 - [ ] T023 [US2] 通知、会話ログ、5軸レポートUIを `src/app/(journey)/notifications/`、`report/`、`src/components/report/` に実装する
 - [ ] T024 [US2] 会話生成からレポート表示までを `tests/e2e/matching-report.spec.ts` で検証する
