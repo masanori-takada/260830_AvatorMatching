@@ -12,6 +12,9 @@ export async function startMatch(): Promise<ActionResult<{ matchRunId: string; s
     await requireUser();
     const client = await createServerSupabaseClient();
     const { data, error } = await client.rpc("start_match_run");
+    if (error?.message.includes("STALE_PROFILE")) {
+      return failure("STATE_CONFLICT", "回答が更新されています。プロフィールを再生成してください。", false);
+    }
     if (error) throw error;
     const row = (data as StartMatchRow[] | null)?.[0];
     if (!row || row.status !== "queued") {

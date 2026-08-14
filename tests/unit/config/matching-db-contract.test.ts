@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const migrationPath = resolve(process.cwd(), "supabase/migrations/202608130003_matching.sql");
+const pgTapPath = resolve(process.cwd(), "supabase/tests/database/002_match_processing.test.sql");
 
 describe("matching DB契約", () => {
   it("5テーブル・enum・owner RLS・最小権限・Realtimeを定義する", () => {
@@ -34,11 +35,30 @@ describe("matching DB契約", () => {
       expect(sql).toMatch(new RegExp(`grant execute on function public\\.${escaped} to authenticated`, "i"));
     }
     expect(sql).toMatch(/owner_id := public\.lock_current_user_journey\(\)/i);
+    expect(sql).toMatch(/source_revision[\s\S]*sum\(answer\.revision\)[\s\S]*STALE_PROFILE/i);
     expect(sql).toMatch(/attempt_count < 3/i);
     expect(sql).toMatch(/run\.attempt_count not between 1 and 3/i);
     expect(sql).toMatch(/jsonb_array_length\(p_payload -> 'messages'\) not between 8 and 20/i);
+    expect(sql).toMatch(/jsonb_typeof\(p_payload\) is distinct from 'object'/i);
+    expect(sql).toMatch(/jsonb_typeof\(message -> 'answerRefs'\) is distinct from 'array'/i);
+    expect(sql).toMatch(/jsonb_array_length\(message -> 'answerRefs'\) < 1/i);
+    expect(sql).toMatch(/count\(distinct ref\.value\)[\s\S]*< 3/i);
     expect(sql).toMatch(/count\(distinct dimension ->> 'axis'\) = 5/i);
     expect(sql).toMatch(/interview_answers[\s\S]*answer_refs/i);
     expect(sql).toMatch(/insert into public\.conversation_messages[\s\S]*insert into public\.compatibility_reports[\s\S]*insert into public\.compatibility_dimensions[\s\S]*insert into public\.notifications[\s\S]*status = 'completed'/i);
+    expect(sql).toMatch(/where id = p_match_run_id and match_runs\.owner_id = owner_id for update/i);
+  });
+
+  it("pgTAPが所有権・stale profile・必須refs・再試行・冪等完了を検証する", () => {
+    const sql = readFileSync(pgTapPath, "utf8");
+    expect(sql).toMatch(/select plan\(24\)/i);
+    for (const contract of [
+      "他ownerはclaimできない", "他ownerはcompleteできない", "古いプロフィールでは開始しない",
+      "answerRefs欠落を拒否する", "answerRefs nullを拒否する", "answerRefs非arrayを拒否する",
+      "空answerRefsを拒否する", "検証失敗時は部分書込を残さない", "4回目のclaimを拒否する",
+      "complete再実行でも5軸を維持する",
+    ]) {
+      expect(sql).toContain(contract);
+    }
   });
 });

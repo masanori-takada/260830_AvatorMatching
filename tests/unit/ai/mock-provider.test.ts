@@ -40,6 +40,7 @@ describe("MockAiProvider", () => {
     });
 
     expect(match.messages.length).toBeGreaterThanOrEqual(8);
+    expect(match.messages.every(({ answerRefs }) => answerRefs.length >= 1)).toBe(true);
     expect(new Set(match.messages.flatMap(({ answerRefs }) => answerRefs)).size).toBeGreaterThanOrEqual(3);
     expect(new Set(match.report.dimensions.map(({ axis }) => axis)).size).toBe(5);
     const turns = new Set(match.messages.map(({ turnIndex }) => turnIndex));

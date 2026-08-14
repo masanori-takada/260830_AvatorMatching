@@ -46,3 +46,13 @@
 
 - migration/RPCの実Postgres実行はDocker制約により未検証です。Docker利用可能環境で`pnpm test:db`を必ず実行してください。
 - 同期Mock処理のみを実装しています。将来の非同期workerでも同じclaim/complete/fail RPCとprivacy wrapperを使用する必要があります。
+
+## Solレビュー限定修正（2026-08-15）
+
+- RED: SQL契約、Mock provider、start Actionの3ファイルで3 tests failed / 5 passedを確認しました。欠落していたプロフィールrevision照合、全発言の非空`answerRefs`、`STALE_PROFILE`のAction境界がそれぞれ失敗理由でした。
+- GREEN: Task 6と関連AI契約は6 files / 16 tests passed（exit 0、19.4秒）です。型検査（7.7秒）、Lint（16.1秒）、環境変数付きproduction build（20.3秒）もNode 24でexit 0でした。
+- `start_match_run()`はjourney advisory lock取得後、ownerの20回答revision合計と`avatar_profiles.source_revision`を比較し、不一致時は`STALE_PROFILE`でrunを一件も作りません。Server Actionはこれをallow-listed `STATE_CONFLICT`へ変換します。
+- `complete_match_run()`はJSON型を`is distinct from`による段階検証へ変更しました。全messageに非空配列`answerRefs`を必須化し、重複を拒否し、全参照がownerの回答に存在すること、全messageのdistinct参照unionが3件以上であることをDB境界で検証します。
+- pgTAPは24 assertionsへ拡張し、他ownerのclaim/complete拒否、stale profileとrun作成0、`answerRefs`欠落/null/非array/empty、invalid後の部分書込0、failed再試行とattempt 3上限、completed再実行の冪等性を契約化しました。
+- 並行completeは実DBで同時実行できていませんが、owner一致を含む対象run行の`FOR UPDATE`、reportの`match_run_id unique`、dimensionの`(report_id, axis) unique`、単一RPC transactionにより直列化と重複防止を静的確認しました。
+- pgTAP実行はDocker未導入の既知制約により未実行です。実行可能環境では`pnpm test:db`による確認が必要です。Playwrightは本限定修正の対象外です。

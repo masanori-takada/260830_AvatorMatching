@@ -37,7 +37,7 @@ export class MockAiProvider implements AiProvider {
         body: index % 2 === 0
           ? `${item.code}の「${item.value}」という回答を共有しました。`
           : `${input.candidate.avatarAlias}の匿名プロフィールと照らして共通点を確かめました。`,
-        answerRefs: index % 2 === 0 ? [item.code] : [],
+        answerRefs: [item.code],
       };
     });
     const axes = [

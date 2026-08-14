@@ -27,4 +27,14 @@ describe("startMatch", () => {
     expect(requireUser).toHaveBeenCalledOnce();
     expect(rpc).toHaveBeenCalledWith("start_match_run");
   });
+  it("回答revisionとプロフィールがずれた場合は再生成を案内する", async () => {
+    createServerSupabaseClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: "STALE_PROFILE" } }),
+    });
+
+    await expect(startMatch()).resolves.toMatchObject({
+      ok: false,
+      error: { code: "STATE_CONFLICT", retryable: false },
+    });
+  });
 });

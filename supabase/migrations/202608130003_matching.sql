@@ -125,6 +125,9 @@ declare
   owner_id uuid;
   selected_candidate_id uuid;
   selected_provider text;
+  profile_source_revision integer;
+  answer_count integer;
+  current_source_revision integer;
 begin
   owner_id := public.lock_current_user_journey();
 
@@ -132,11 +135,18 @@ begin
   from public.match_runs run where run.owner_id = owner_id for update;
   if match_run_id is not null then return next; return; end if;
 
-  if (select count(*) from public.interview_answers answer where answer.owner_id = owner_id) <> 20 then
+  select count(*)::integer, coalesce(sum(answer.revision), 0)::integer
+  into answer_count, current_source_revision
+  from public.interview_answers answer where answer.owner_id = owner_id;
+  if answer_count <> 20 then
     raise exception 'INTERVIEW_INCOMPLETE';
   end if;
-  select profile.provider into selected_provider from public.avatar_profiles profile where profile.owner_id = owner_id;
+  select profile.provider, profile.source_revision into selected_provider, profile_source_revision
+  from public.avatar_profiles profile where profile.owner_id = owner_id;
   if selected_provider is null then raise exception 'PROFILE_NOT_FOUND'; end if;
+  if profile_source_revision is distinct from current_source_revision then
+    raise exception 'STALE_PROFILE';
+  end if;
   select candidate.id into selected_candidate_id from public.demo_candidates candidate
   where candidate.active order by candidate.id limit 1;
   if selected_candidate_id is null then raise exception 'CANDIDATE_NOT_FOUND'; end if;
@@ -179,22 +189,29 @@ begin
   if run.status <> 'processing' then raise exception 'STATE_CONFLICT'; end if;
   if run.attempt_count not between 1 and 3 then raise exception 'RETRY_LIMIT'; end if;
 
-  if jsonb_typeof(p_payload) <> 'object'
-    or jsonb_typeof(p_payload -> 'messages') <> 'array'
-    or jsonb_array_length(p_payload -> 'messages') not between 8 and 20
-    or jsonb_typeof(p_payload -> 'report') <> 'object'
-    or jsonb_typeof(p_payload #> '{report,dimensions}') <> 'array'
-    or jsonb_array_length(p_payload #> '{report,dimensions}') <> 5
-  then raise exception 'INVALID_OUTPUT'; end if;
+  if jsonb_typeof(p_payload) is distinct from 'object' then raise exception 'INVALID_OUTPUT'; end if;
+  if jsonb_typeof(p_payload -> 'messages') is distinct from 'array' then raise exception 'INVALID_OUTPUT'; end if;
+  if jsonb_array_length(p_payload -> 'messages') not between 8 and 20 then raise exception 'INVALID_OUTPUT'; end if;
+  if jsonb_typeof(p_payload -> 'report') is distinct from 'object' then raise exception 'INVALID_OUTPUT'; end if;
+  if jsonb_typeof(p_payload #> '{report,dimensions}') is distinct from 'array' then raise exception 'INVALID_OUTPUT'; end if;
+  if jsonb_array_length(p_payload #> '{report,dimensions}') <> 5 then raise exception 'INVALID_OUTPUT'; end if;
+
+  if exists (
+    select 1 from jsonb_array_elements(p_payload -> 'messages') message
+    where jsonb_typeof(message) is distinct from 'object'
+      or jsonb_typeof(message -> 'turnIndex') is distinct from 'number'
+      or jsonb_typeof(message -> 'speaker') is distinct from 'string'
+      or jsonb_typeof(message -> 'body') is distinct from 'string'
+      or jsonb_typeof(message -> 'answerRefs') is distinct from 'array'
+  ) then raise exception 'INVALID_OUTPUT'; end if;
 
   if exists (
     select 1 from jsonb_array_elements(p_payload -> 'messages') with ordinality as item(message, turn_no)
-    where jsonb_typeof(message) <> 'object'
-      or (message ->> 'turnIndex') !~ '^[0-9]+$'
+    where (message ->> 'turnIndex') !~ '^[0-9]+$'
       or (message ->> 'turnIndex')::integer <> turn_no
       or message ->> 'speaker' not in ('user_avatar', 'candidate_avatar')
       or char_length(message ->> 'body') not between 1 and 1000
-      or jsonb_typeof(message -> 'answerRefs') <> 'array'
+      or jsonb_array_length(message -> 'answerRefs') < 1
       or exists (
         select 1 from jsonb_array_elements_text(message -> 'answerRefs') ref(value)
         where value !~ '^q(0[1-9]|1[0-9]|20)$'
@@ -204,6 +221,24 @@ begin
       or (select count(*) from jsonb_array_elements_text(message -> 'answerRefs'))
         <> (select count(distinct value) from jsonb_array_elements_text(message -> 'answerRefs') ref(value))
   ) then raise exception 'INVALID_OUTPUT'; end if;
+
+  if (select count(distinct ref.value)
+      from jsonb_array_elements(p_payload -> 'messages') message
+      cross join lateral jsonb_array_elements_text(message -> 'answerRefs') ref(value)) < 3
+  then raise exception 'INVALID_OUTPUT'; end if;
+
+  if jsonb_typeof(p_payload #> '{report,overallScore}') is distinct from 'number'
+    or jsonb_typeof(p_payload #> '{report,summary}') is distinct from 'string'
+    or jsonb_typeof(p_payload #> '{report,caution}') is distinct from 'string'
+    or exists (
+      select 1 from jsonb_array_elements(p_payload #> '{report,dimensions}') dimension
+      where jsonb_typeof(dimension) is distinct from 'object'
+        or jsonb_typeof(dimension -> 'axis') is distinct from 'string'
+        or jsonb_typeof(dimension -> 'score') is distinct from 'number'
+        or jsonb_typeof(dimension -> 'explanation') is distinct from 'string'
+        or jsonb_typeof(dimension -> 'evidenceTurnIndex') is distinct from 'number'
+    )
+  then raise exception 'INVALID_OUTPUT'; end if;
 
   if (select count(distinct dimension ->> 'axis') = 5
       from jsonb_array_elements(p_payload #> '{report,dimensions}') dimension) is not true
