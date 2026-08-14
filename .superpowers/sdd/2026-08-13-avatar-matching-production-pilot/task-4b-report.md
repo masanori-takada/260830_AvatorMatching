@@ -51,3 +51,9 @@ T006の残件だった固定架空候補1件を実装しました。既存の質
 - 両テーブルのbefore update triggerは、foundationで定義済みの`public.set_updated_at()`を再利用します。
 - pgTAPへ4列と2 triggerの6 assertionsを追加し、合計12 assertionsにしました。Docker未導入のため実DB実行は未実施です。
 - 修正後ゲート: 静的契約1 file / 4 tests、型検査、Lint、公開ダミー環境変数付きproduction buildはすべてexit 0でした。
+
+## SolレビューMinor修正: seed状態冪等性
+
+- RED: 同値UPSERTに`IS DISTINCT FROM`条件を要求し、条件欠落で1 test failedを確認しました。
+- 両`ON CONFLICT DO UPDATE`は、更新対象列tupleが`excluded` tupleと異なる場合だけUPDATEします。同値seed再実行ではtriggerが発火せず、`updated_at`を維持します。
+- GREEN: 静的契約1 file / 4 tests、型検査、Lint、公開ダミー環境変数付きproduction buildはすべてexit 0でした。

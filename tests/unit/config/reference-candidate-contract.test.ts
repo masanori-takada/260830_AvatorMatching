@@ -63,6 +63,12 @@ describe("架空候補のDB契約", () => {
       /full_name|company|department|email|phone|address|birth|location/i,
     );
     expect(seed.match(/on conflict/gi)).toHaveLength(2);
+    expect(seed).toMatch(
+      /where \(demo_candidates\.avatar_alias, demo_candidates\.conversation_profile, demo_candidates\.active\)\s+is distinct from \(excluded\.avatar_alias, excluded\.conversation_profile, excluded\.active\)/i,
+    );
+    expect(seed).toMatch(
+      /where \(candidate_reveals\.full_name, candidate_reveals\.company, candidate_reveals\.department, candidate_reveals\.bio\)\s+is distinct from \(excluded\.full_name, excluded\.company, excluded\.department, excluded\.bio\)/i,
+    );
     expect(seed.match(/00000000-0000-4000-8000-000000000001/g)).toHaveLength(2);
     expect(seed).toContain("星乃 ルナ（完全架空）");
     expect(seed).toContain("ルミナス架空企画株式会社（完全架空）");

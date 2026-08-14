@@ -18,7 +18,9 @@ values (
 on conflict (id) do update
 set avatar_alias = excluded.avatar_alias,
     conversation_profile = excluded.conversation_profile,
-    active = excluded.active;
+    active = excluded.active
+where (demo_candidates.avatar_alias, demo_candidates.conversation_profile, demo_candidates.active)
+  is distinct from (excluded.avatar_alias, excluded.conversation_profile, excluded.active);
 
 -- 以下の人物・団体・部署・経歴はすべて本デモ用の完全な架空情報。
 insert into public.candidate_reveals (candidate_id, full_name, company, department, bio)
@@ -33,4 +35,6 @@ on conflict (candidate_id) do update
 set full_name = excluded.full_name,
     company = excluded.company,
     department = excluded.department,
-    bio = excluded.bio;
+    bio = excluded.bio
+where (candidate_reveals.full_name, candidate_reveals.company, candidate_reveals.department, candidate_reveals.bio)
+  is distinct from (excluded.full_name, excluded.company, excluded.department, excluded.bio);
