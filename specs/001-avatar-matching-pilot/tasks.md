@@ -9,7 +9,7 @@
 - [X] T001 Next.js 16.3.0と固定依存を `package.json`、`pnpm-lock.yaml`、`tsconfig.json`、`next.config.ts` に構成する
 - [X] T002 [P] Vitest、Testing Library、Playwright、axeの設定を `vitest.config.ts`、`playwright.config.ts`、`tests/setup.ts` に作成する
 - [X] T003 [P] 環境変数契約を `.env.example` と `src/lib/env.ts` に作成する
-- [ ] T004 [P] 公開対象を限定する `.gitignore` と `public/app-assets/README.md` を作成し、PDF・GIFを公開しない規則を記載する
+- [X] T004 [P] 公開対象を限定する `.gitignore` と `public/app-assets/README.md` を作成し、PDF・GIFを公開しない規則を記載する
 
 ## Phase 2: Foundational
 
@@ -18,7 +18,7 @@
 - [X] T007 [P] ブラウザ・サーバー・proxy用クライアントを `src/lib/supabase/client.ts`、`server.ts`、`proxy.ts`、`src/proxy.ts` に作成する
 - [X] T008 認証済み利用者を毎回検証するDALを `src/features/identity/server/session.ts` と `src/features/identity/server/actions.ts` に実装する
 - [X] T009 [P] 共通Result、エラー分類、秘匿ログを `src/lib/result.ts`、`src/lib/logger.ts`、`src/lib/errors.ts` に実装し `tests/unit/lib/` で検証する
-- [ ] T010 [P] 既存デモ由来のトークンとAppShellを `src/app/globals.css`、`src/components/app-shell/` に実装し `tests/unit/components/app-shell.test.tsx` で検証する
+- [X] T010 [P] 既存デモ由来のトークンとAppShellを `src/app/globals.css`、`src/components/app-shell/` に実装し `tests/unit/components/app-shell.test.tsx` で検証する
 - [ ] T011 RLS基礎テストを `supabase/tests/database/001_rls_foundation.test.sql` に作成し、T005の認証ヘルパーで匿名利用者間の遮断を確認する
 
 ## Phase 3: User Story 1 - 20問のインタビュー (P1)
