@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell/app-shell";
-import styles from "@/components/interview/interview.module.css";
+import { CompletionForm } from "@/components/interview/completion-form";
 import { Progress } from "@/components/interview/progress";
+import { completeInterview } from "@/features/avatar-profile/server/service";
 import { getInterviewState } from "@/features/interview/server/queries";
 import { requireUser } from "@/features/identity/server/session";
 
@@ -16,13 +17,15 @@ export default async function InterviewCompletePage() {
     redirect(`/interview/${firstUnanswered?.displayOrder ?? 1}`);
   }
 
+  async function complete() {
+    "use server";
+    return completeInterview();
+  }
+
   return (
     <AppShell>
       <Progress answeredCount={20} />
-      <section className={styles.complete}>
-        <h2 className={styles.title}>回答が完了しました</h2>
-        <p className={styles.copy}>20問すべての回答を保存しました。</p>
-      </section>
+      <CompletionForm action={complete} />
     </AppShell>
   );
 }
