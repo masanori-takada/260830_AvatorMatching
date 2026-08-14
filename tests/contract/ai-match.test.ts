@@ -33,5 +33,11 @@ describe("AI match契約", () => {
       ...base,
       report: { ...base.report, dimensions: base.report.dimensions.map((item, index) => index === 0 ? { ...item, evidenceTurnIndex: 99 } : item) },
     })).toThrow();
+    expect(() => matchOutputSchema.parse({
+      ...base,
+      messages: base.messages.map((message, index) => index === 0
+        ? { ...message, body: "連絡先は user@example.com" }
+        : message),
+    })).toThrow("識別情報");
   });
 });

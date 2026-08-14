@@ -1,17 +1,22 @@
-import { avatarProfileOutputSchema, matchOutputSchema } from "@/lib/ai/schemas";
+import { avatarProfileOutputSchema, matchOutputSchema, redactPotentialPii } from "@/lib/ai/schemas";
 import type { AiProvider, MatchInput, MatchOutput, ProfileInput, AvatarProfileOutput } from "@/lib/ai/types";
 
 const answerAt = (input: ProfileInput, code: string) =>
   input.answers.find((answer) => answer.questionCode === code)?.answer ?? "未回答";
 
+const safeAnswerAt = (input: ProfileInput, code: string) =>
+  Array.from(redactPotentialPii(answerAt(input, code))).slice(0, 80).join("");
+
 export class MockAiProvider implements AiProvider {
+  readonly providerId = "mock-v1";
+
   async generateProfile(input: ProfileInput): Promise<AvatarProfileOutput> {
     return avatarProfileOutputSchema.parse({
-      summary: `q01「${answerAt(input, "q01")}」、q02「${answerAt(input, "q02")}」、q03「${answerAt(input, "q03")}」という回答から、無理のないペースと対話を大切にする人物像が見えます。`,
+      summary: `q01「${safeAnswerAt(input, "q01")}」、q02「${safeAnswerAt(input, "q02")}」、q03「${safeAnswerAt(input, "q03")}」という回答から、無理のないペースと対話を大切にする人物像が見えます。`,
       traits: {
-        leisure: `休日傾向: q01「${answerAt(input, "q01") }」`,
-        communication: `交流傾向: q02「${answerAt(input, "q02") }」`,
-        lifestyle: `計画傾向: q03「${answerAt(input, "q03") }」`,
+        leisure: `休日傾向: q01「${safeAnswerAt(input, "q01") }」`,
+        communication: `交流傾向: q02「${safeAnswerAt(input, "q02") }」`,
+        lifestyle: `計画傾向: q03「${safeAnswerAt(input, "q03") }」`,
         values: "誠実な対話を大切にします。",
         relationships: "相手のペースを尊重します。",
         priorities: "無理のない継続性を重視します。",
@@ -20,15 +25,21 @@ export class MockAiProvider implements AiProvider {
   }
 
   async generateMatch(input: MatchInput): Promise<MatchOutput> {
-    const refs = ["q01", "q02", "q03"];
-    const messages = Array.from({ length: 8 }, (_, index) => ({
-      turnIndex: index + 1,
-      speaker: index % 2 === 0 ? "user_avatar" as const : "candidate_avatar" as const,
-      body: index % 2 === 0
-        ? `${refs[index % 3]}の回答を手がかりに、過ごし方について話しました。`
-        : `${input.candidate.avatarAlias}の匿名プロフィールから、共通点を確かめました。`,
-      answerRefs: index % 2 === 0 ? [refs[index % 3]!] : [],
+    const evidence = ["q01", "q02", "q04"].map((code) => ({
+      code,
+      value: safeAnswerAt(input, code),
     }));
+    const messages = Array.from({ length: 8 }, (_, index) => {
+      const item = evidence[Math.floor(index / 2) % evidence.length]!;
+      return {
+        turnIndex: index + 1,
+        speaker: index % 2 === 0 ? "user_avatar" as const : "candidate_avatar" as const,
+        body: index % 2 === 0
+          ? `${item.code}の「${item.value}」という回答を共有しました。`
+          : `${input.candidate.avatarAlias}の匿名プロフィールと照らして共通点を確かめました。`,
+        answerRefs: index % 2 === 0 ? [item.code] : [],
+      };
+    });
     const axes = [
       "conversation_flow", "values_alignment", "humor_fit", "mutual_interest", "mismatch_severity",
     ] as const;

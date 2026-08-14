@@ -52,3 +52,31 @@
 
 - pgTAPは契約化済みですが、この環境ではDockerが使えず実DB上のRLS確認は未実行です。
 - Bedrock等を追加する場合も`getAiProvider`の明示allow-listと生成後Zod parseを維持する必要があります。
+
+## Solレビュー修正
+
+### RED / GREEN
+
+- 実回答反映、`providerId`、全文字列PII拒否、保存済み回答再検証、同値write skip、条件付きDB upsertを先にテスト化し、5 filesで13 failures / 4 passedを確認しました。
+- GREEN: Node 24でTask 5個別を実行し、5 files / 19 tests passed、exit 0、17秒でした。
+
+### 修正内容
+
+- match発言へq01・q02の安全な選択実値と、q04自由文のPII除去後の意味断片を埋め込み、`answerRefs`だけに依存しない根拠にしました。
+- Mock出力前にemail、電話、郵便番号、URL、既知の候補開示値を`[非公開]`へ置換し、自由文は80コードポイントへ制限します。
+- profile/match両Zod schemaは全階層の文字列を再帰走査し、同じ識別patternが残ればprovider種別を問わずfail-closedに拒否します。strict objectによる候補開示キー禁止も維持します。
+- `completeInterview()`は固定`INTERVIEW_QUESTIONS`全20問とのcode対応を確認し、各回答を`parseInterviewAnswer()`へ通します。仕様外choice、Unicode空白だけのfree text、長さ違反ではproviderもDB writeも呼びません。
+- `AiProvider.providerId`をreadonly契約にし、Mockは`mock-v1`、DB保存はprovider自身のIDを使用します。
+- 既存profileのsummary、traits、sourceRevision、providerIdが同一ならActionはwriteをスキップします。
+- 競合時も同値更新を防ぐため、`upsert_my_avatar_profile`をSECURITY INVOKER・空search_path・`auth.uid()`固定で実装しました。`ON CONFLICT`がowner行をロックした後、全保存tupleの`IS DISTINCT FROM`がtrueの場合だけUPDATEするため、同値の並行再試行でも`updated_at`を維持します。
+- pgTAPは同値RPCがfalse、差分RPCがtrueを返す2 assertionsを加え、合計6 assertionsです。Docker未導入のため未実行です。
+
+### 修正後ゲート
+
+| 検証 | 結果 |
+| --- | --- |
+| Task 5個別 | 5 files / 19 tests、exit 0、17秒 |
+| 型検査 | Node 24、exit 0、7.4秒 |
+| Lint | Node 24、exit 0、11秒 |
+| production build | 公開ダミー環境変数付きNode 24、exit 0、20秒 |
+| pgTAP / Playwright | 環境制約により未実行 |

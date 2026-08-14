@@ -9,6 +9,9 @@ const answers: ProfileInput["answers"] = Array.from({ length: 20 }, (_, index) =
   answer: `回答${index + 1}`,
   revision: 1,
 }));
+answers[0]!.answer = "外へ出かける";
+answers[1]!.answer = "親しい人と少人数";
+answers[3]!.answer = "読書に夢中です user@example.com";
 
 describe("MockAiProvider", () => {
   it("同じ20回答から同じプロフィールを生成し3回答以上を反映する", async () => {
@@ -40,9 +43,18 @@ describe("MockAiProvider", () => {
     expect(new Set(match.report.dimensions.map(({ axis }) => axis)).size).toBe(5);
     const turns = new Set(match.messages.map(({ turnIndex }) => turnIndex));
     expect(match.report.dimensions.every(({ evidenceTurnIndex }) => turns.has(evidenceTurnIndex))).toBe(true);
+    const output = JSON.stringify(match);
+    expect(output).toContain("外へ出かける");
+    expect(output).toContain("親しい人と少人数");
+    expect(output).toContain("読書に夢中です");
+    expect(output).not.toContain("user@example.com");
   });
 
   it("未対応provider名はfail-closedに拒否する", () => {
     expect(() => getAiProvider("bedrock" as string)).toThrow("未対応のAI provider");
+  });
+
+  it("保存用の安定したproviderIdを公開する", () => {
+    expect(new MockAiProvider().providerId).toBe("mock-v1");
   });
 });

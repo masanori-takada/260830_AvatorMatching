@@ -22,5 +22,7 @@ describe("avatar_profiles DB契約", () => {
     expect(sql).toMatch(/alter table public\.avatar_profiles force row level security/i);
     expect(sql.match(/\(select auth\.uid\(\)\) = owner_id/g)).toHaveLength(4);
     expect(sql).toMatch(/grant select, insert, update on table public\.avatar_profiles to authenticated/i);
+    expect(sql).toMatch(/on conflict \(owner_id\) do update[\s\S]*where \(avatar_profiles\.summary,[\s\S]*is distinct from \(excluded\.summary/i);
+    expect(sql).toMatch(/grant execute on function public\.upsert_my_avatar_profile/i);
   });
 });

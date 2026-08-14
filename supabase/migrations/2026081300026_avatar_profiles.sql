@@ -48,3 +48,44 @@ with check ((select auth.uid()) = owner_id);
 revoke all on table public.avatar_profiles from public;
 revoke all on table public.avatar_profiles from anon, authenticated;
 grant select, insert, update on table public.avatar_profiles to authenticated;
+
+create or replace function public.upsert_my_avatar_profile(
+  p_summary text,
+  p_traits jsonb,
+  p_source_revision integer,
+  p_provider text
+)
+returns boolean
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  owner_id uuid := (select auth.uid());
+  changed boolean;
+begin
+  if owner_id is null then
+    raise exception 'UNAUTHENTICATED';
+  end if;
+
+  insert into public.avatar_profiles (
+    owner_id, summary, traits, source_revision, provider
+  )
+  values (
+    owner_id, p_summary, p_traits, p_source_revision, p_provider
+  )
+  on conflict (owner_id) do update
+  set summary = excluded.summary,
+      traits = excluded.traits,
+      source_revision = excluded.source_revision,
+      provider = excluded.provider
+  where (avatar_profiles.summary, avatar_profiles.traits, avatar_profiles.source_revision, avatar_profiles.provider)
+    is distinct from (excluded.summary, excluded.traits, excluded.source_revision, excluded.provider)
+  returning true into changed;
+
+  return coalesce(changed, false);
+end;
+$$;
+
+revoke all on function public.upsert_my_avatar_profile(text, jsonb, integer, text) from public, anon;
+grant execute on function public.upsert_my_avatar_profile(text, jsonb, integer, text) to authenticated;

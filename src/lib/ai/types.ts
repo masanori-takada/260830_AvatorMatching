@@ -41,6 +41,7 @@ export type MatchOutput = {
 };
 
 export interface AiProvider {
+  readonly providerId: string;
   generateProfile(input: ProfileInput): Promise<AvatarProfileOutput>;
   generateMatch(input: MatchInput): Promise<MatchOutput>;
 }
