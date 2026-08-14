@@ -97,10 +97,15 @@ describe("PrivacySafeAiProvider", () => {
   });
 
   it.each([
-    ["休日は読書で、名前は山田太郎です", "山田太郎さん"],
-    ["休日は読書で、名前は山 田・太 郎です", "山・田 太郎さん"],
-    ["休日は読書で、名前はＡＢＣＤです", "ABCDさん"],
-  ])("正規化後の連続部分一致で識別断片の漏洩を拒否する: %s", async (raw, leaked) => {
+    ["休日は読書で、名前は山田太郎です。user@example.com", "山田太郎さん"],
+    ["氏名：山 田・太 郎です", "山・田 太郎さん"],
+    ["会社：架空企画株式会社です", "架空企画株式会社で働く人物"],
+    ["所属 は 未来 対話・室です", "未来対話室のメンバー"],
+    ["住所: 東京都港区芝です", "東京都港区芝の近辺"],
+    ["休日は読書です。山田太郎と申します", "山田太郎さん"],
+    ["Ａ Ｂ・Ｃ Ｄ といいます", "ABCDさん"],
+    ["李 雷", "李雷さん"],
+  ])("明示された識別候補だけを正規化して漏洩拒否する: %s", async (raw, leaked) => {
     const privateAnswers = answers.map((answer) => ({ ...answer }));
     for (const index of [3, 7, 11, 17, 19]) privateAnswers[index]!.answer = "読書";
     privateAnswers[19]!.answer = raw;
@@ -111,13 +116,16 @@ describe("PrivacySafeAiProvider", () => {
     );
   });
 
-  it("4文字未満の短文はrawを渡さず、一般語との偶然一致だけでは拒否しない", async () => {
+  it.each([
+    ["誠実な対話を大切にしています", "誠実な対話を大切にしています。"],
+    ["読書", "読書も含む一般的な趣味の要約です。"],
+  ])("一般文はrawを渡さず、出力との一致だけでは拒否しない: %s", async (raw, output) => {
     const privateAnswers = answers.map((answer) => ({ ...answer }));
-    privateAnswers[19]!.answer = "読書";
-    const inner = providerWith("読書も含む一般的な趣味の要約です。");
+    privateAnswers[19]!.answer = raw;
+    const inner = providerWith(output);
     const provider = new PrivacySafeAiProvider(inner);
 
     await expect(provider.generateProfile({ answers: privateAnswers })).resolves.toBeDefined();
-    expect(JSON.stringify(vi.mocked(inner.generateProfile).mock.calls[0]![0])).not.toContain("読書");
+    expect(JSON.stringify(vi.mocked(inner.generateProfile).mock.calls[0]![0])).not.toContain(raw);
   });
 });

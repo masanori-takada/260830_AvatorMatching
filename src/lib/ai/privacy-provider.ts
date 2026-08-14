@@ -21,17 +21,36 @@ function normalizeForComparison(value: string): string {
     .replace(/[\p{White_Space}\p{P}\p{S}]/gu, "");
 }
 
-function identifyingFragments(value: string): string[] {
-  // email・電話などの定型識別子は出力schemaの専用patternで検査し、machine enumとの偶然一致を避ける。
-  if (redactPotentialPii(value) !== value) return [];
-  const codePoints = Array.from(normalizeForComparison(value));
-  if (codePoints.length < 4) return [];
+function normalizeCandidate(value: string): string {
+  return normalizeForComparison(value)
+    .replace(/(?:で働いています|に所属しています|と申します|といいます|と言います|です)$/u, "");
+}
 
-  const fragments = Array.from(
-    { length: codePoints.length - 3 },
-    (_, index) => codePoints.slice(index, index + 4).join(""),
-  );
-  return [...new Set(fragments)];
+/** 自由記述から、明示的に識別情報として示された値だけを抽出する。 */
+export function extractSensitiveFragments(value: string): string[] {
+  // 定型PIIは出力schemaの専用patternへ委譲し、除去後の文章からも候補抽出を続ける。
+  const scrubbed = redactPotentialPii(value.normalize("NFKC")).replace(/\[[^\]]+\]/gu, " ");
+  const candidates: string[] = [];
+  const labelPattern = /(?:名前|氏名|会社|勤務先|所属|部署|住所|連絡先)\s*(?:は|:|：)?\s*([^。、,!！?？\n\r]+)/gu;
+  const introductionPattern = /(?:^|[。、.!！?？])\s*([\p{L}・\s]{2,16}?)(?:と申します|といいます|と言います)/gu;
+  const nameWithCopulaPattern = /(?:^|[。、.!！?？])\s*(\p{Script=Han}{2,8})です/gu;
+
+  for (const pattern of [labelPattern, introductionPattern, nameWithCopulaPattern]) {
+    for (const match of scrubbed.matchAll(pattern)) candidates.push(match[1] ?? "");
+  }
+
+  const standalone = scrubbed.trim();
+  if (
+    /^\p{Script=Han}{3,8}$/u.test(standalone)
+    || /^[\p{L}]{1,4}[\s・]+[\p{L}]{1,4}$/u.test(standalone)
+  ) {
+    candidates.push(standalone);
+  }
+
+  return [...new Set(candidates.map(normalizeCandidate).filter((candidate) => {
+    const length = Array.from(candidate).length;
+    return length >= 2 && length <= 80;
+  }))];
 }
 
 function outputStrings(value: unknown): string[] {
@@ -44,7 +63,7 @@ function outputStrings(value: unknown): string[] {
 function assertNoPrivateAnswerLeak(rawAnswers: readonly AiAnswer[], output: unknown): void {
   const fragments = rawAnswers
     .filter(({ questionCode }) => freeTextCodes.has(questionCode))
-    .flatMap(({ answer }) => identifyingFragments(answer));
+    .flatMap(({ answer }) => extractSensitiveFragments(answer));
   const normalizedOutput = outputStrings(output).map(normalizeForComparison);
 
   if (fragments.some((fragment) => normalizedOutput.some((text) => text.includes(fragment)))) {

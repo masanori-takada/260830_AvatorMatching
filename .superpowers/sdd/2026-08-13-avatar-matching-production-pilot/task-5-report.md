@@ -106,6 +106,31 @@
 | production build | 公開ダミー環境変数付きNode 24、exit 0、18.6秒 |
 | pgTAP / Playwright | 既知のDocker / runner環境制約により未実行 |
 
+## Solレビュー context-aware PII検査への再設計
+
+### RED / GREEN
+
+- RED: blanket 4文字n-gramが一般文「誠実な対話を大切にしています」を誤拒否し、email混在回答の残文にある氏名と、短い空白区切り氏名「李 雷」を見逃す3 failuresを確認しました。
+- GREEN: 抽出器個別1 file / 16 tests、既存回帰6 files / 37 testsがNode 24ですべて成功しました。
+
+### 修正内容
+
+- 全4文字n-gramを撤去し、`extractSensitiveFragments()`が明示された識別候補だけを抽出する設計へ変更しました。自由記述rawをdelegateへ渡さない主防御は維持しています。
+- email・電話・URL・郵便番号などは既存専用patternで除去して出力Zodへ委譲し、残った文の検査を継続します。回答全体をskipしないため、emailと混在した氏名も検出します。
+- 「名前/氏名/会社/勤務先/所属/部署/住所/連絡先」ラベル後の値、日本語の名乗り表現直前の値、3〜8漢字または区切り付き2〜8文字相当の単独氏名候補を抽出します。
+- 候補と出力はNFKC化し、Unicode空白・句読点・中黒等の記号を除去して比較します。会社・所属・住所、通常/表記崩し/NFKCの氏名をテストしました。
+- 一般文と短い一般語「読書」は一致しても拒否しない誤検知回帰を追加しました。pgTAP/migrationは変更していません。
+
+### 再設計後ゲート
+
+| 検証 | 結果 |
+| --- | --- |
+| 個別 / 回帰テスト | 1 file / 16 tests、6 files / 37 tests、exit 0 |
+| 型検査 | Node 24、exit 0、7.1秒 |
+| Lint | Node 24、exit 0、10.7秒 |
+| production build | 公開ダミー環境変数付きNode 24、exit 0、17.8秒 |
+| pgTAP / Playwright | 本修正では未実行（既知のDocker / runner環境制約） |
+
 ## Solレビュー PII部分一致の最終修正
 
 ### RED / GREEN
