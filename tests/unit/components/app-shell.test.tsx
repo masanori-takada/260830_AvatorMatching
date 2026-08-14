@@ -2,6 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { AppShell } from "@/components/app-shell/app-shell";
+import { StatusBar } from "@/components/app-shell/status-bar";
 
 describe("AppShell", () => {
   afterEach(cleanup);
@@ -30,5 +31,15 @@ describe("AppShell", () => {
     expect(
       screen.queryByRole("navigation", { name: "メインナビゲーション" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("StatusBar", () => {
+  afterEach(cleanup);
+
+  it("装飾的な端末状態を支援技術から隠す", () => {
+    const { container } = render(<StatusBar />);
+
+    expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
   });
 });

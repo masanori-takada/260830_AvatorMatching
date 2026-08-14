@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:db": "supabase test db",
-    "test:e2e": "playwright test --pass-with-no-tests",
+    "test:e2e": "playwright test --grep-invert @visual --pass-with-no-tests",
     "test:visual": "playwright test --grep @visual --pass-with-no-tests"
   },
   "dependencies": {

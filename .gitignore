@@ -8,3 +8,11 @@ test-results/
 .env*
 !.env.example
 *.tsbuildinfo
+public/app-assets/**/*.pdf
+public/app-assets/**/*.gif
+public/app-assets/**/*.ppt
+public/app-assets/**/*.pptx
+public/app-assets/**/*.doc
+public/app-assets/**/*.docx
+public/app-assets/**/*.xls
+public/app-assets/**/*.xlsx

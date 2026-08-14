@@ -2,7 +2,7 @@ import styles from "./app-shell.module.css";
 
 export function StatusBar() {
   return (
-    <div aria-label="端末の状態" className={styles.statusBar}>
+    <div aria-hidden="true" className={styles.statusBar}>
       <span>9:41</span>
       <span aria-hidden="true" className={styles.statusIcons}>
         <svg viewBox="0 0 24 24">
