@@ -15,6 +15,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 type SavedAnswerRow = {
   revision: number;
   answered_count: number;
+  next_question_order: number | null;
 };
 
 export async function saveInterviewAnswer(
@@ -48,6 +49,9 @@ export async function saveInterviewAnswer(
       if (error.message.includes("INTERVIEW_LOCKED")) {
         return failure("STATE_CONFLICT", "マッチング開始後は回答を変更できません。", false);
       }
+      if (error.message.includes("OUT_OF_ORDER")) {
+        return failure("STATE_CONFLICT", "回答順が更新されました。再読み込みしてお試しください。", false);
+      }
       if (error.message.includes("VALIDATION_ERROR")) {
         return failure("VALIDATION_ERROR", "回答内容を確認してください。", false);
       }
@@ -62,8 +66,9 @@ export async function saveInterviewAnswer(
       return failure("INTERNAL_ERROR", "回答を保存できませんでした。もう一度お試しください。", true);
     }
 
-    const nextPath =
-      row.answered_count >= 20 ? "/interview/complete" : `/interview/${row.answered_count + 1}`;
+    const nextPath = row.next_question_order === null
+      ? "/interview/complete"
+      : `/interview/${row.next_question_order}`;
     return success({
       revision: row.revision,
       answeredCount: row.answered_count,

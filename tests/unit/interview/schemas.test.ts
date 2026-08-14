@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { INTERVIEW_QUESTIONS } from "@/features/interview/domain";
+import {
+  findFirstUnansweredOrder,
+  getAllowedInterviewOrder,
+  INTERVIEW_QUESTIONS,
+} from "@/features/interview/domain";
 import { parseInterviewAnswer } from "@/features/interview/schemas";
 
 describe("固定インタビュー質問", () => {
@@ -33,7 +37,26 @@ describe("固定インタビュー質問", () => {
       "大切にしていること",
     );
     expect(() => parseInterviewAnswer(question!, "   ")).toThrow("1文字以上");
+    expect(() => parseInterviewAnswer(question!, "\t\n\u00a0\u3000")).toThrow("1文字以上");
     expect(parseInterviewAnswer(question!, "あ".repeat(500))).toHaveLength(500);
     expect(() => parseInterviewAnswer(question!, "あ".repeat(501))).toThrow("500文字以内");
+  });
+});
+
+describe("回答順序", () => {
+  it("回答済み件数ではなく最初の未回答orderを返す", () => {
+    expect(findFirstUnansweredOrder(INTERVIEW_QUESTIONS, [
+      { questionCode: "q01", answer: "外へ出かける", revision: 1 },
+      { questionCode: "q03", answer: "早めに決めたい", revision: 1 },
+    ])).toBe(2);
+  });
+
+  it("未回答への飛び越しは戻し、既存回答のrevision修正は許可する", () => {
+    const answers = [{ questionCode: "q01" as const, answer: "外へ出かける", revision: 1 }];
+    expect(getAllowedInterviewOrder(3, INTERVIEW_QUESTIONS, answers)).toBe(2);
+    expect(getAllowedInterviewOrder(3, INTERVIEW_QUESTIONS, [
+      ...answers,
+      { questionCode: "q03", answer: "早めに決めたい", revision: 1 },
+    ])).toBe(3);
   });
 });

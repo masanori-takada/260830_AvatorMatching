@@ -102,3 +102,28 @@ export const INTERVIEW_QUESTIONS = [
 export function findInterviewQuestion(code: string): InterviewQuestion | undefined {
   return INTERVIEW_QUESTIONS.find((question) => question.code === code);
 }
+
+export function findFirstUnansweredOrder(
+  questions: readonly InterviewQuestion[],
+  answers: readonly InterviewAnswer[],
+): number | null {
+  const answeredCodes = new Set(answers.map((answer) => answer.questionCode));
+  return questions.find((question) => !answeredCodes.has(question.code))?.displayOrder ?? null;
+}
+
+export function getAllowedInterviewOrder(
+  requestedOrder: number,
+  questions: readonly InterviewQuestion[],
+  answers: readonly InterviewAnswer[],
+): number {
+  const requestedQuestion = questions.find((question) => question.displayOrder === requestedOrder);
+  const hasExistingAnswer = requestedQuestion
+    ? answers.some((answer) => answer.questionCode === requestedQuestion.code)
+    : false;
+  const firstUnansweredOrder = findFirstUnansweredOrder(questions, answers);
+
+  if (!hasExistingAnswer && firstUnansweredOrder !== null && requestedOrder > firstUnansweredOrder) {
+    return firstUnansweredOrder;
+  }
+  return requestedOrder;
+}

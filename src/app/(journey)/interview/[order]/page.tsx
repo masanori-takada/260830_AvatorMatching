@@ -5,6 +5,7 @@ import styles from "@/components/interview/interview.module.css";
 import { Progress } from "@/components/interview/progress";
 import { QuestionCard } from "@/components/interview/question-card";
 import { saveInterviewAnswer } from "@/features/interview/server/actions";
+import { getAllowedInterviewOrder } from "@/features/interview/domain";
 import { getInterviewState } from "@/features/interview/server/queries";
 import { requireUser } from "@/features/identity/server/session";
 
@@ -25,6 +26,10 @@ export default async function InterviewPage({ params, searchParams }: InterviewP
   }
 
   const state = await getInterviewState(userId);
+  const allowedOrder = getAllowedInterviewOrder(order, state.questions, state.answers);
+  if (allowedOrder !== order) {
+    redirect(`/interview/${allowedOrder}`);
+  }
   const question = state.questions.find((candidate) => candidate.displayOrder === order);
   if (!question) {
     notFound();

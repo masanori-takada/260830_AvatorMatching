@@ -21,4 +21,11 @@ describe("インタビュー画面部品", () => {
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "20");
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "20");
   });
+
+  it("絵文字を含む500文字をサーバーと同じコードポイント単位で扱える", () => {
+    render(<QuestionCard action={vi.fn()} question={INTERVIEW_QUESTIONS[19]!} />);
+
+    expect(screen.getByLabelText("回答を入力")).not.toHaveAttribute("maxlength");
+    expect(screen.getByText("500文字以内")).toBeVisible();
+  });
 });

@@ -61,7 +61,34 @@ values
   ('q17', 17, '恋愛・関係性', 'choice', '一緒にいて心地よいと感じる相手は？', '["笑いのツボが合う", "価値観が近い", "新しい視点をくれる"]', null, null),
   ('q18', 18, '恋愛・関係性', 'free_text', 'すれ違いが起きたとき、相手にどう向き合ってほしい？', '[]', 1, 500),
   ('q19', 19, '譲れない条件', 'choice', '関係を築くうえで最も大切なのは？', '["誠実さ", "生活リズム", "会話の相性"]', null, null),
-  ('q20', 20, '自由回答', '相手に、これだけは知っておいてほしいことは？', '[]', 1, 500);
+  ('q20', 20, '自由回答', 'free_text', '相手に、これだけは知っておいてほしいことは？', '[]', 1, 500);
+
+create or replace function public.interview_has_visible_text(p_value text)
+returns boolean
+language sql
+immutable
+parallel safe
+set search_path = ''
+as $$
+  select coalesce(
+    pg_catalog.translate(
+      pg_catalog.regexp_replace(p_value, '[[:space:]]', '', 'g'),
+      pg_catalog.chr(133) || pg_catalog.chr(160) || pg_catalog.chr(5760) ||
+      pg_catalog.chr(8192) || pg_catalog.chr(8193) || pg_catalog.chr(8194) ||
+      pg_catalog.chr(8195) || pg_catalog.chr(8196) || pg_catalog.chr(8197) ||
+      pg_catalog.chr(8198) || pg_catalog.chr(8199) || pg_catalog.chr(8200) ||
+      pg_catalog.chr(8201) || pg_catalog.chr(8202) || pg_catalog.chr(8232) ||
+      pg_catalog.chr(8233) || pg_catalog.chr(8239) || pg_catalog.chr(8287) ||
+      pg_catalog.chr(12288) || pg_catalog.chr(65279),
+      ''
+    ),
+    ''
+  ) <> '';
+$$;
+
+alter table public.interview_answers
+add constraint interview_answers_visible_text_check
+check (public.interview_has_visible_text(answer));
 
 alter table public.interview_questions enable row level security;
 alter table public.interview_questions force row level security;
@@ -89,6 +116,27 @@ revoke all on table public.interview_questions from anon, authenticated;
 revoke all on table public.interview_answers from anon, authenticated;
 grant select on table public.interview_questions to authenticated;
 grant select on table public.interview_answers to authenticated;
+
+-- 回答保存と将来のmatch作成は、必ずこの関数をトランザクション冒頭で呼ぶ。
+create or replace function public.lock_current_user_journey()
+returns uuid
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  owner_id uuid := (select auth.uid());
+begin
+  if owner_id is null then
+    raise exception 'UNAUTHENTICATED';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(owner_id::text, 0)
+  );
+  return owner_id;
+end;
+$$;
 
 create or replace function public.is_interview_locked()
 returns boolean
@@ -120,7 +168,7 @@ create or replace function public.save_interview_answer(
   p_answer text,
   p_expected_revision integer default null
 )
-returns table (revision integer, answered_count integer)
+returns table (revision integer, answered_count integer, next_question_order integer)
 language plpgsql
 security definer
 set search_path = ''
@@ -128,16 +176,22 @@ as $$
 declare
   current_user_id uuid := (select auth.uid());
   saved_revision integer;
+  first_unanswered_code text;
 begin
   if current_user_id is null then
     raise exception 'UNAUTHENTICATED';
   end if;
 
+  current_user_id := public.lock_current_user_journey();
+
   if public.is_interview_locked() then
     raise exception 'INTERVIEW_LOCKED';
   end if;
 
-  if p_answer is null or p_answer <> btrim(p_answer) then
+  if p_answer is null
+    or char_length(p_answer) not between 1 and 500
+    or not public.interview_has_visible_text(p_answer)
+  then
     raise exception 'VALIDATION_ERROR';
   end if;
 
@@ -156,6 +210,23 @@ begin
   end if;
 
   if p_expected_revision is null then
+    select question.code
+    into first_unanswered_code
+    from public.interview_questions as question
+    where question.active
+      and not exists (
+        select 1
+        from public.interview_answers as existing
+        where existing.owner_id = current_user_id
+          and existing.question_code = question.code
+      )
+    order by question.display_order
+    limit 1;
+
+    if p_question_code is distinct from first_unanswered_code then
+      raise exception 'OUT_OF_ORDER';
+    end if;
+
     insert into public.interview_answers as inserted (owner_id, question_code, answer)
     values (current_user_id, p_question_code, p_answer)
     on conflict (owner_id, question_code) do nothing
@@ -176,13 +247,25 @@ begin
 
   return query
   select saved_revision,
-    count(*)::integer
-  from public.interview_answers as answer
-  where answer.owner_id = current_user_id;
+    (select count(*)::integer
+      from public.interview_answers as answer
+      where answer.owner_id = current_user_id),
+    (select min(question.display_order)
+      from public.interview_questions as question
+      where question.active
+        and not exists (
+          select 1
+          from public.interview_answers as answer
+          where answer.owner_id = current_user_id
+            and answer.question_code = question.code
+        ));
 end;
 $$;
 
+revoke all on function public.interview_has_visible_text(text) from public, anon, authenticated;
+revoke all on function public.lock_current_user_journey() from public, anon;
 revoke all on function public.is_interview_locked() from public, anon;
 revoke all on function public.save_interview_answer(text, text, integer) from public, anon;
+grant execute on function public.lock_current_user_journey() to authenticated;
 grant execute on function public.is_interview_locked() to authenticated;
 grant execute on function public.save_interview_answer(text, text, integer) to authenticated;

@@ -58,3 +58,35 @@
 - anonymous userもSupabase上は`authenticated` roleとして扱い、全owner policyで `(select auth.uid())` を使っています。
 - migrationはユーザー指定の固定ファイル名に従いました。DB未実行のため、pgTAPによる実DB上のRLS/revision確認はDocker利用可能時に必要です。
 - Playwright E2Eは契約を追加済みですが、この環境ではrunner停止が既知のため未実行です。
+
+## Solレビュー修正
+
+### RED / GREEN
+
+- SQL同期RED: 全20問のliteral fixtureをTypeScriptとmigrationの両方へ照合し、q20の`kind`欠落によりSQL側が19問になる失敗を確認しました。
+- 遷移RED: 回答数10・最初の未回答order 3のRPC応答に対し、旧Actionが誤って`/interview/11`を返す失敗を確認しました。
+- 入力RED: textareaのUTF-16 `maxlength=500`、直URL順序helper未実装、`OUT_OF_ORDER`が`INTERNAL_ERROR`になる失敗をそれぞれ確認しました。
+- GREEN: Node 24でTask 4 unit/integrationを実行し、5 files / 15 tests passed、exit 0、17.5秒でした。
+
+### 修正内容
+
+- q20へ`free_text`を補い、全20問のcode/category/kind/prompt/choicesを静的契約テストで同期しました。
+- DB境界で1〜500コードポイントを検証し、Unicode White_Space全コードポイントとBOMだけの回答を可視文字なしとして拒否します。
+- 新規回答は最初の未回答質問だけを許可します。既存回答は一致するrevisionで、match開始前に限り修正できます。
+- RPCが`next_question_order`を返し、Actionは回答件数ではなく最初の未回答へ遷移します。未回答への直URL飛び越しも同じorderへ戻し、既存回答の修正画面は許可します。
+- `lock_current_user_journey()`が`auth.uid()`由来のtransaction advisory lockを取得します。回答保存はmatch状態確認より先にこのlockを取り、TOCTOUを解消します。
+- **将来のmatch作成RPCも、同じトランザクションの冒頭で必ず`lock_current_user_journey()`を呼んでからmatch状態を作成することがDB契約です。** 片側だけでは排他契約が成立しません。
+- E2E契約へUnicode空白拒否後も同じq04に留まること、完了後reloadでも20回答と完了表示が維持されること、開始失敗時の再試行案内を追加しました。
+- HTMLのUTF-16単位`maxlength`を外し、サーバーのコードポイント単位検証を正本にしました。500文字案内は`aria-describedby`で関連付けています。
+- AI吹き出しの左下radius指定が後続short-handで上書きされない順序へ修正しました。
+
+### 修正後ゲート
+
+| 検証 | 結果 |
+| --- | --- |
+| Task 4 unit/integration | 5 files / 15 tests、exit 0 |
+| 型検査 | Node 24、exit 0、7.1秒 |
+| Lint | Node 24、exit 0、9.7秒 |
+| production build | 公開ダミー環境変数付きNode 24、exit 0、18.7秒 |
+| DB pgTAP | Docker未導入の既知制約により未実行。13 assertionsへ更新済み |
+| Playwright E2E | runner停止の既知制約により未実行 |

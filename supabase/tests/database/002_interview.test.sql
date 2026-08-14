@@ -1,6 +1,6 @@
 begin;
 
-select plan(10);
+select plan(13);
 
 select tests.create_supabase_user('interview_user_a');
 select tests.create_supabase_user('interview_user_b');
@@ -8,9 +8,25 @@ select tests.create_supabase_user('interview_user_b');
 select is((select count(*) from public.interview_questions), 20::bigint, '固定質問は20問');
 select is((select count(*) from public.interview_questions where kind = 'choice'), 15::bigint, '選択式は15問');
 select is((select count(*) from public.interview_questions where kind = 'free_text'), 5::bigint, '自由記述は5問');
+select ok(
+  not public.interview_has_visible_text(E'\t\n' || chr(160) || chr(12288)),
+  'Unicode空白だけの回答は可視文字を持たない'
+);
 
 set local role authenticated;
 select tests.authenticate_as('interview_user_a');
+
+select is(
+  public.lock_current_user_journey(),
+  tests.get_supabase_uid('interview_user_a'),
+  'owner単位のtransaction advisory lockを取得する'
+);
+select throws_ok(
+  $$select * from public.save_interview_answer('q02', '一人', null)$$,
+  'P0001',
+  'OUT_OF_ORDER',
+  '最初の未回答より先の新規回答を拒否する'
+);
 
 select is(
   (select revision from public.save_interview_answer('q01', '外へ出かける', null)),
