@@ -6,9 +6,9 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Next.js 16.3.0と固定依存を `package.json`、`pnpm-lock.yaml`、`tsconfig.json`、`next.config.ts` に構成する
-- [ ] T002 [P] Vitest、Testing Library、Playwright、axeの設定を `vitest.config.ts`、`playwright.config.ts`、`tests/setup.ts` に作成する
-- [ ] T003 [P] 環境変数契約を `.env.example` と `src/lib/env.ts` に作成する
+- [X] T001 Next.js 16.3.0と固定依存を `package.json`、`pnpm-lock.yaml`、`tsconfig.json`、`next.config.ts` に構成する
+- [X] T002 [P] Vitest、Testing Library、Playwright、axeの設定を `vitest.config.ts`、`playwright.config.ts`、`tests/setup.ts` に作成する
+- [X] T003 [P] 環境変数契約を `.env.example` と `src/lib/env.ts` に作成する
 - [ ] T004 [P] 公開対象を限定する `.gitignore` と `public/app-assets/README.md` を作成し、PDF・GIFを公開しない規則を記載する
 
 ## Phase 2: Foundational
