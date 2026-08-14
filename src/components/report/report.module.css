@@ -1,0 +1,28 @@
+.stack { display: flex; flex-direction: column; gap: var(--space-14); }
+.card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: var(--space-16); }
+.partner { align-items: center; display: flex; gap: var(--space-12); }
+.avatar { align-items: center; background: var(--color-pink-soft); border-radius: 50%; color: var(--color-wine); display: flex; flex: 0 0 48px; font-size: 18px; font-weight: 800; height: 48px; justify-content: center; }
+.partnerMeta { flex: 1; min-width: 0; }
+.title { font-size: 18px; line-height: 1.35; margin: 0; }
+.badge, .hint { background: var(--color-pink-soft); border-radius: var(--radius-pill); color: var(--color-wine); font-size: 11px; font-weight: 700; padding: var(--space-2) var(--space-8); white-space: nowrap; }
+.note, .refs { color: var(--color-subtext); font-size: 11px; margin: var(--space-4) 0 0; }
+.subtleTitle, .sectionTitle { font-size: 15px; margin: 0 0 var(--space-10); }
+.subtleTitle { color: var(--color-subtext); }
+.conversation { display: flex; flex-direction: column; gap: var(--space-8); list-style: none; margin: 0; padding: 0; }
+.selfTurn, .partnerTurn { border-radius: var(--space-16); max-width: 86%; padding: var(--space-8) var(--space-12); }
+.selfTurn { align-self: flex-end; background: var(--color-wine); border-bottom-right-radius: var(--space-4); color: var(--color-card); }
+.partnerTurn { align-self: flex-start; background: var(--color-pink-soft); border-bottom-left-radius: var(--space-4); }
+.speaker { font-size: 11px; font-weight: 700; margin: 0; opacity: .75; }
+.body { margin: var(--space-2) 0 0; white-space: pre-wrap; word-break: break-word; }
+.selfTurn .refs { color: rgb(255 255 255 / 78%); }
+.axisHead { align-items: baseline; display: flex; gap: var(--space-8); }
+.axisLabel { flex: 1; font-size: 15px; margin: 0; }
+.score { color: var(--color-wine); font-size: 18px; }
+.meter { background: var(--color-track); border-radius: var(--radius-pill); height: 8px; margin-top: var(--space-8); overflow: hidden; }
+.fill, .neutralFill { display: block; height: 100%; transition: width .4s ease-out; }
+.fill { background: linear-gradient(90deg, var(--color-wine), var(--color-pink)); }
+.neutralFill { background: var(--color-subtext); }
+.explanation { margin: var(--space-10) 0 0; }
+.quote { border-left: 3px solid var(--color-pink); color: var(--color-subtext); margin: var(--space-10) 0 0; padding-left: var(--space-10); }
+.caution { background: var(--color-subtle); border-radius: var(--radius-button); color: var(--color-subtext); margin: var(--space-10) 0 0; padding: var(--space-10); }
+@media (prefers-reduced-motion: reduce) { .fill, .neutralFill { transition: none; } }

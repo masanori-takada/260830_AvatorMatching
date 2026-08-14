@@ -1,0 +1,11 @@
+.title { font-size: 22px; margin: var(--space-8) 0 var(--space-16); }
+.stack { display: flex; flex-direction: column; gap: var(--space-10); }
+.notice { align-items: center; background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); color: var(--color-text); display: flex; gap: var(--space-12); min-height: 72px; padding: var(--space-14); text-align: left; text-decoration: none; width: 100%; }
+.unread { border-color: var(--color-pink); }
+.dot { background: var(--color-wine); border-radius: 50%; flex: 0 0 8px; height: 8px; }
+.noticeBody { flex: 1; min-width: 0; }
+.noticeTitle { display: block; font-size: 15px; font-weight: 700; }
+.noticeCopy { display: block; margin-top: var(--space-2); }
+.time { color: var(--color-subtext); display: block; font-size: 11px; margin-top: var(--space-4); }
+.empty { background: var(--color-card); border-radius: var(--radius-card); padding: var(--space-18); }
+.error { color: var(--color-danger); }

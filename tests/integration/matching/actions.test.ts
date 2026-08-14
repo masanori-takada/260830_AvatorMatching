@@ -37,4 +37,16 @@ describe("startMatch", () => {
       error: { code: "STATE_CONFLICT", retryable: false },
     });
   });
+
+  it("既存completed runも冪等な再開結果として返す", async () => {
+    createServerSupabaseClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({
+        data: [{ match_run_id: "11111111-1111-4111-8111-111111111111", status: "completed" }], error: null,
+      }),
+    });
+    await expect(startMatch()).resolves.toMatchObject({
+      ok: true,
+      data: { status: "completed" },
+    });
+  });
 });
