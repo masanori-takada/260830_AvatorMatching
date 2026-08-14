@@ -14,7 +14,7 @@
 ## Phase 2: Foundational
 
 - [X] T005 Supabase設定、基礎スキーマ、pgTAP認証ヘルパーを `supabase/config.toml`、`supabase/migrations/202608130001_foundation.sql`、`supabase/tests/database/000_test_helpers.sql` に作成する
-- [ ] T006 [P] 20問と架空候補を `supabase/migrations/202608130002_seed_reference_data.sql` と `supabase/seed.sql` に定義する
+- [X] T006 [P] 20問と架空候補を `supabase/migrations/202608130002_interview.sql`、`supabase/migrations/2026081300025_reference_candidate.sql`、`supabase/seed.sql` に定義する
 - [X] T007 [P] ブラウザ・サーバー・proxy用クライアントを `src/lib/supabase/client.ts`、`server.ts`、`proxy.ts`、`src/proxy.ts` に作成する
 - [X] T008 認証済み利用者を毎回検証するDALを `src/features/identity/server/session.ts` と `src/features/identity/server/actions.ts` に実装する
 - [X] T009 [P] 共通Result、エラー分類、秘匿ログを `src/lib/result.ts`、`src/lib/logger.ts`、`src/lib/errors.ts` に実装し `tests/unit/lib/` で検証する
@@ -25,12 +25,12 @@
 
 **Independent Test**: 未開始から20問へ回答し、20回答とアバター要約が保存される。
 
-- [ ] T012 [P] [US1] 質問・回答スキーマの失敗テストを `tests/unit/interview/schemas.test.ts` に作成する
-- [ ] T013 [P] [US1] 回答保存・完了Actionの統合テストを `tests/integration/interview/actions.test.ts` に作成する
-- [ ] T014 [US1] 質問・回答ドメインとActionを `src/features/interview/domain.ts`、`schemas.ts`、`server/queries.ts`、`server/actions.ts` に実装する
+- [X] T012 [P] [US1] 質問・回答スキーマの失敗テストを `tests/unit/interview/schemas.test.ts` に作成する
+- [X] T013 [P] [US1] 回答保存・完了Actionの統合テストを `tests/integration/interview/actions.test.ts` に作成する
+- [X] T014 [US1] 質問・回答ドメインとActionを `src/features/interview/domain.ts`、`schemas.ts`、`server/queries.ts`、`server/actions.ts` に実装する
 - [ ] T015 [US1] 決定論的アバター要約を `src/lib/ai/provider.ts`、`schemas.ts`、`mock-provider.ts` と `src/features/avatar-profile/server/service.ts` に実装する
-- [ ] T016 [US1] 開始、質問、完了画面を `src/app/(journey)/start/`、`interview/[order]/`、`interview/complete/` と `src/components/interview/` に実装する
-- [ ] T017 [US1] 20問完了フローを `tests/e2e/interview.spec.ts` に実装し、選択15問・自由記述5問・空白拒否を検証する
+- [X] T016 [US1] 開始、質問、完了画面を `src/app/(journey)/start/`、`interview/[order]/`、`interview/complete/` と `src/components/interview/` に実装する
+- [X] T017 [US1] 20問完了フローを `tests/e2e/interview.spec.ts` に実装し、選択15問・自由記述5問・空白拒否を検証する
 
 ## Phase 4: User Story 2 - 会話と相性レポート (P1)
 
