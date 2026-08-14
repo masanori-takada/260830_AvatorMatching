@@ -80,3 +80,28 @@
 | Lint | Node 24、exit 0、11秒 |
 | production build | 公開ダミー環境変数付きNode 24、exit 0、20秒 |
 | pgTAP / Playwright | 環境制約により未実行 |
+
+## Solレビュー PII境界の構造修正
+
+### RED / GREEN
+
+- RED: `PrivacySafeAiProvider` の境界テストを先に追加し、未実装moduleを解決できずsuiteが失敗することを確認しました。DBの追加静的契約は既存migrationですでに満たされていました。
+- GREEN: Node 24でAI unit/contract、avatar profile integration、DB静的契約を実行し、6 files / 26 tests passed、exit 0、20.8秒でした。
+
+### 修正内容
+
+- `getAiProvider()` が返すProviderを共通の`PrivacySafeAiProvider`で包み、canonical質問のうち`free_text`であるq04/q08/q12/q18/q20は、profile/matchのどちらでもdelegateへ渡す前に固定placeholderへ置換します。元の配列は変更しません。
+- Provider出力はprofile/matchそれぞれのZod schemaで検証したうえで、元の自由記述からNFKC正規化・空白/記号除去・自己紹介語尾除去で得た識別断片と全文字列を照合します。一致時は保存・返却前にfail-closedします。
+- Mockの意味反映根拠は自由記述を使わず、安全なchoiceのq01/q02/q03だけに限定しました。未知の`AI_PROVIDER`は従来どおり拒否します。
+- q16はcanonical仕様ではchoiceのため、`山田太郎です`は回答再検証でProvider呼出前に拒否するテストを追加しました。実名・空白/記号混在・email・電話の文脈照合はcanonical free textで検証しています。
+- RPC静的契約で`SECURITY INVOKER`、空`search_path`、`auth.uid()`、PUBLIC/anon execute revoke、authenticated execute grantを個別検証します。
+
+### 修正後ゲート
+
+| 検証 | 結果 |
+| --- | --- |
+| 対象unit / contract / integration | 6 files / 26 tests、exit 0、20.8秒 |
+| 型検査 | Node 24、exit 0、7.6秒 |
+| Lint | Node 24、exit 0、11.7秒 |
+| production build | 公開ダミー環境変数付きNode 24、exit 0、18.6秒 |
+| pgTAP / Playwright | 既知のDocker / runner環境制約により未実行 |

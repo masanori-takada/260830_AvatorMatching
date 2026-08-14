@@ -11,6 +11,7 @@ const answers: ProfileInput["answers"] = Array.from({ length: 20 }, (_, index) =
 }));
 answers[0]!.answer = "外へ出かける";
 answers[1]!.answer = "親しい人と少人数";
+answers[2]!.answer = "早めに決めたい";
 answers[3]!.answer = "読書に夢中です user@example.com";
 
 describe("MockAiProvider", () => {
@@ -46,7 +47,8 @@ describe("MockAiProvider", () => {
     const output = JSON.stringify(match);
     expect(output).toContain("外へ出かける");
     expect(output).toContain("親しい人と少人数");
-    expect(output).toContain("読書に夢中です");
+    expect(output).toContain("早めに決めたい");
+    expect(output).not.toContain("読書に夢中です");
     expect(output).not.toContain("user@example.com");
   });
 

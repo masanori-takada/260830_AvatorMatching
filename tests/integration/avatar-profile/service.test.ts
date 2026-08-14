@@ -66,6 +66,7 @@ describe("completeInterview", () => {
   it.each([
     [0, "仕様外の選択肢"],
     [3, "\t\n\u00a0\u3000"],
+    [15, "山田太郎です"],
   ])("不正回答が1件でもあればproviderと保存を呼ばない: q%s", async (index, invalidValue) => {
     const invalidAnswers = answers.map((answer) => ({ ...answer }));
     invalidAnswers[index]!.answer = invalidValue;

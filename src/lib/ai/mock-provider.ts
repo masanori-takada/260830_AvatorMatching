@@ -1,11 +1,11 @@
-import { avatarProfileOutputSchema, matchOutputSchema, redactPotentialPii } from "@/lib/ai/schemas";
+import { avatarProfileOutputSchema, matchOutputSchema } from "@/lib/ai/schemas";
 import type { AiProvider, MatchInput, MatchOutput, ProfileInput, AvatarProfileOutput } from "@/lib/ai/types";
 
 const answerAt = (input: ProfileInput, code: string) =>
   input.answers.find((answer) => answer.questionCode === code)?.answer ?? "未回答";
 
 const safeAnswerAt = (input: ProfileInput, code: string) =>
-  Array.from(redactPotentialPii(answerAt(input, code))).slice(0, 80).join("");
+  Array.from(answerAt(input, code)).slice(0, 80).join("");
 
 export class MockAiProvider implements AiProvider {
   readonly providerId = "mock-v1";
@@ -25,7 +25,7 @@ export class MockAiProvider implements AiProvider {
   }
 
   async generateMatch(input: MatchInput): Promise<MatchOutput> {
-    const evidence = ["q01", "q02", "q04"].map((code) => ({
+    const evidence = ["q01", "q02", "q03"].map((code) => ({
       code,
       value: safeAnswerAt(input, code),
     }));

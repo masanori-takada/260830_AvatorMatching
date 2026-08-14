@@ -24,5 +24,10 @@ describe("avatar_profiles DB契約", () => {
     expect(sql).toMatch(/grant select, insert, update on table public\.avatar_profiles to authenticated/i);
     expect(sql).toMatch(/on conflict \(owner_id\) do update[\s\S]*where \(avatar_profiles\.summary,[\s\S]*is distinct from \(excluded\.summary/i);
     expect(sql).toMatch(/grant execute on function public\.upsert_my_avatar_profile/i);
+    expect(sql).toMatch(/security invoker/i);
+    expect(sql).toMatch(/set search_path = ''/i);
+    expect(sql).toMatch(/owner_id uuid := \(select auth\.uid\(\)\)/i);
+    expect(sql).toMatch(/revoke all on function public\.upsert_my_avatar_profile[^;]+from public, anon/i);
+    expect(sql).toMatch(/grant execute on function public\.upsert_my_avatar_profile[^;]+to authenticated/i);
   });
 });
