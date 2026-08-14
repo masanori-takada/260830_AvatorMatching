@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -18,20 +18,68 @@ export function useMatchRun({ matchRunId, initialStatus, timeoutMs = 30_000 }: U
   const [generation, setGeneration] = useState<number | null>(
     initialStatus === "completed" || initialStatus === "failed" ? null : 0,
   );
+  const statusRef = useRef<MatchViewStatus>(initialStatus);
+  const generationRef = useRef<number | null>(
+    initialStatus === "completed" || initialStatus === "failed" ? null : 0,
+  );
+  const nextGenerationRef = useRef(0);
+  const requestRef = useRef<{ generation: number; controller: AbortController } | null>(null);
 
-  const restart = useCallback(() => {
-    setStatus("processing");
-    setErrorCode(null);
-    setGeneration((current) => current === null ? 0 : current + 1);
+  const abortRequest = useCallback((expectedGeneration?: number) => {
+    const request = requestRef.current;
+    if (!request || (expectedGeneration !== undefined && request.generation !== expectedGeneration)) return;
+    requestRef.current = null;
+    request.controller.abort();
   }, []);
 
-  const applyProcessStatus = useCallback((next: "queued" | "processing" | "completed" | "failed") => {
+  const transition = useCallback((next: MatchViewStatus, expectedGeneration: number) => {
+    if (generationRef.current !== expectedGeneration) return false;
+    if (["completed", "failed", "timed_out"].includes(statusRef.current)) return false;
+    statusRef.current = next;
     setStatus(next);
-    if (next === "completed" || next === "failed") setGeneration(null);
+    if (next === "completed" || next === "failed" || next === "timed_out") {
+      generationRef.current = null;
+      setGeneration(null);
+      abortRequest(expectedGeneration);
+    }
+    return true;
+  }, [abortRequest]);
+
+  const restart = useCallback(() => {
+    abortRequest();
+    const nextGeneration = ++nextGenerationRef.current;
+    generationRef.current = nextGeneration;
+    statusRef.current = "processing";
+    setStatus("processing");
+    setErrorCode(null);
+    setGeneration(nextGeneration);
+    return nextGeneration;
+  }, [abortRequest]);
+
+  const applyProcessStatus = useCallback((
+    next: "queued" | "processing" | "completed" | "failed",
+    expectedGeneration: number,
+  ) => transition(next, expectedGeneration), [transition]);
+
+  const registerRequest = useCallback((expectedGeneration: number, controller: AbortController) => {
+    if (generationRef.current !== expectedGeneration) {
+      controller.abort();
+      return false;
+    }
+    abortRequest();
+    requestRef.current = { generation: expectedGeneration, controller };
+    return true;
+  }, [abortRequest]);
+
+  const releaseRequest = useCallback((expectedGeneration: number, controller: AbortController) => {
+    if (requestRef.current?.generation === expectedGeneration && requestRef.current.controller === controller) {
+      requestRef.current = null;
+    }
   }, []);
 
   useEffect(() => {
     if (generation === null) return;
+    const activeGeneration = generation;
     const client = createBrowserSupabaseClient();
     let stopped = false;
     let pollTimer: ReturnType<typeof setInterval> | undefined;
@@ -54,7 +102,7 @@ export function useMatchRun({ matchRunId, initialStatus, timeoutMs = 30_000 }: U
     function applyRow(row: { status?: string; error_code?: string | null }) {
       if (stopped || !["queued", "processing", "completed", "failed"].includes(row.status ?? "")) return;
       const next = row.status as Exclude<MatchViewStatus, "timed_out">;
-      setStatus(next);
+      if (!transition(next, activeGeneration)) return;
       setErrorCode(row.error_code ?? null);
       if (next === "completed" || next === "failed") stop();
     }
@@ -66,19 +114,24 @@ export function useMatchRun({ matchRunId, initialStatus, timeoutMs = 30_000 }: U
     }, 2_000);
     timeoutTimer = setTimeout(() => {
       if (!stopped) {
-        setStatus("timed_out");
+        transition("timed_out", activeGeneration);
         stop();
       }
     }, timeoutMs);
 
     return stop;
-  }, [generation, matchRunId, timeoutMs]);
+  }, [generation, matchRunId, timeoutMs, transition]);
+
+  useEffect(() => () => abortRequest(), [abortRequest]);
 
   return {
     status,
     errorCode,
     retryable: status === "failed" || status === "timed_out",
+    generation,
     restart,
     applyProcessStatus,
+    registerRequest,
+    releaseRequest,
   };
 }

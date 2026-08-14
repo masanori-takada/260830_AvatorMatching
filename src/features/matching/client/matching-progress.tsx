@@ -10,40 +10,54 @@ export function MatchingProgress({ matchRunId, initialStatus }: {
   matchRunId: string;
   initialStatus: "queued" | "processing" | "completed" | "failed";
 }) {
-  const { status, restart, applyProcessStatus } = useMatchRun({ matchRunId, initialStatus });
-  const requested = useRef(false);
+  const {
+    status,
+    restart,
+    applyProcessStatus,
+    registerRequest,
+    releaseRequest,
+  } = useMatchRun({ matchRunId, initialStatus });
+  const requestRef = useRef<AbortController | null>(null);
 
-  const processMatch = useCallback(async (restartMonitoring = false) => {
-    if (requested.current) return;
-    requested.current = true;
-    if (restartMonitoring) restart();
+  const processMatch = useCallback(async (generation: number, replace = false) => {
+    if (requestRef.current && !replace) return;
+    const controller = new AbortController();
+    if (!registerRequest(generation, controller)) return;
+    requestRef.current = controller;
     try {
-      const response = await fetch(`/api/match-runs/${matchRunId}/process`, { method: "POST" });
+      const response = await fetch(`/api/match-runs/${matchRunId}/process`, {
+        method: "POST",
+        signal: controller.signal,
+      });
       if (!response.ok) {
-        applyProcessStatus("failed");
+        applyProcessStatus("failed", generation);
         return;
       }
       const payload = await response.json() as { status?: unknown };
       if (["queued", "processing", "completed", "failed"].includes(String(payload.status))) {
-        applyProcessStatus(payload.status as "queued" | "processing" | "completed" | "failed");
+        applyProcessStatus(payload.status as "queued" | "processing" | "completed" | "failed", generation);
       } else {
-        applyProcessStatus("failed");
+        applyProcessStatus("failed", generation);
       }
-    } catch {
-      applyProcessStatus("failed");
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        applyProcessStatus("failed", generation);
+      }
     } finally {
-      requested.current = false;
+      releaseRequest(generation, controller);
+      if (requestRef.current === controller) requestRef.current = null;
     }
-  }, [applyProcessStatus, matchRunId, restart]);
+  }, [applyProcessStatus, matchRunId, registerRequest, releaseRequest]);
 
   useEffect(() => {
     if (initialStatus !== "queued") return;
-    const timer = setTimeout(() => void processMatch(), 0);
+    const timer = setTimeout(() => void processMatch(0), 0);
     return () => clearTimeout(timer);
   }, [initialStatus, processMatch]);
 
   function retry() {
-    void processMatch(true);
+    const generation = restart();
+    void processMatch(generation, true);
   }
 
   if (status === "completed") {

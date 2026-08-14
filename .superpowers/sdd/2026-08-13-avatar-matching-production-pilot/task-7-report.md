@@ -65,3 +65,12 @@
 | Playwright / DB | 既知のrunner停止 / Docker未導入のため未実行 |
 
 pgTAPの追加契約は静的テストで確認済みですが、RLSと権限の実挙動はDocker環境で`pnpm test:db`を再確認する必要があります。
+
+## 非同期race限定修正
+
+- RED: Deferred fetchでtimeout中断とunmount中断を再現し、`AbortSignal`未設定により7件中2件が期待どおり失敗しました。
+- `useMatchRun`は単調増加する世代tokenを返し、同じ世代の状態更新だけを受理します。completed/failed/timed_outは終端として世代を無効化し、旧POSTの500・processing応答で巻き戻りません。
+- pending POSTは世代ごとの`AbortController`へ登録し、timeout、restart、終端状態、unmountでabortします。retryは新世代を同期的に受け取り、旧request lockに妨げられず新POSTと監視を開始します。
+- GREEN: race対象2 files / 11 tests、Task 7回帰9 files / 27 testsが通過しました。
+- 型検査は初回、effect内のnullable世代tokenで1件失敗しました。非null確認直後の`activeGeneration`へ固定して再実行し、Node 24でtypecheck 5.6秒、lint 9.6秒、公開ダミー環境変数付きproduction build 21.1秒のすべてがexit 0でした。
+- DB / Playwrightは変更範囲外かつ既知の環境制約があるため未実行です。
