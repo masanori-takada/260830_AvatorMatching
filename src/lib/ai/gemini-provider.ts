@@ -12,8 +12,14 @@ import type { Schema } from "@google/genai";
 /** 既定モデル。2026-08時点のFlash系最新。2.0系は2026-06-01に停止済みのため使わない。 */
 export const GEMINI_MODEL = "gemini-3.6-flash";
 
-/** 生成1回あたりの上限。SC-009の「30秒以内に失敗表示」に収まるようにする。 */
-export const GEMINI_TIMEOUT_MS = 12_000;
+/**
+ * 生成1回あたりの上限。
+ * 実測(gemini-3.6-flash)は要約6.5秒、会話+レポート13.5秒。当初の12秒では会話生成が
+ * 毎回タイムアウトしたため、実測へ1.5倍程度の余裕を持たせた20秒とする。
+ * 契約違反時の作り直しは1度だけなので最悪40秒になるが、その場合は画面側の30秒タイムアウト
+ * (useMatchRun)が先に失敗表示と再試行手段を提示する(SC-009)。
+ */
+export const GEMINI_TIMEOUT_MS = 20_000;
 
 /**
  * Gemini呼び出しの最小境界。
