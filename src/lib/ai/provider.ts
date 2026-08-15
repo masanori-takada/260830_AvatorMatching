@@ -15,7 +15,11 @@ export function getAiProvider(name: string | undefined = process.env.AI_PROVIDER
         "GEMINI_API_KEY未設定のため、AI_PROVIDER=geminiで起動できません。モックへは自動フォールバックしません。",
       );
     }
-    return new PrivacySafeAiProvider(new GeminiAiProvider({ client: createGeminiClient({ apiKey }) }));
+    // モデルはGEMINI_MODELで差し替えられる。未設定なら実測で選んだ既定を使う。
+    const model = process.env.GEMINI_MODEL?.trim() || undefined;
+    return new PrivacySafeAiProvider(
+      new GeminiAiProvider({ client: createGeminiClient({ apiKey, model }), model }),
+    );
   }
   throw new Error("未対応のAI providerです。");
 }

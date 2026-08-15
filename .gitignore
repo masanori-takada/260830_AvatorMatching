@@ -2,6 +2,9 @@
 .worktrees/
 node_modules/
 .next/
+# エージェントの作業メモとpnpmのローカルストア。成果物ではないため追跡しない。
+.superpowers/
+.pnpm-store/
 coverage/
 playwright-report/
 test-results/

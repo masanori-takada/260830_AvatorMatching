@@ -9,8 +9,17 @@ import type {
 // 型だけの参照。import typeはビルド時に消えるため、AI_PROVIDER=mockの経路でも実行時にSDKを読み込まない。
 import type { Schema } from "@google/genai";
 
-/** 既定モデル。2026-08時点のFlash系最新。2.0系は2026-06-01に停止済みのため使わない。 */
-export const GEMINI_MODEL = "gemini-3.6-flash";
+/**
+ * 既定モデル。GEMINI_MODEL環境変数で差し替えられる。
+ *
+ * 実測比較(同一入力、schema厳格化後):
+ * - gemini-3.5-flash-lite: 要約1.6〜2.9秒 / 会話4.4〜4.9秒、契約充足4/4、反映6〜8問
+ * - gemini-3.6-flash:      要約6.0〜8.1秒 / 会話11.7〜14.1秒、契約充足3/3、反映8〜13問
+ *
+ * 3.6 Flashの方が回答をより多く会話へ織り込むが、待ち時間が約3倍になる。
+ * 体験上の待ち時間を優先してliteを既定とする。2.0系は2026-06-01に停止済みのため使わない。
+ */
+export const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 /**
  * 生成1回あたりの上限。
@@ -31,6 +40,8 @@ export type GeminiClient = {
 
 type GeminiProviderOptions = {
   client: GeminiClient;
+  /** providerIdへ記録するモデル名。clientへ渡したモデルと一致させること。 */
+  model?: string;
   timeoutMs?: number;
 };
 
@@ -55,18 +66,31 @@ const profileResponseSchema = {
   required: ["summary", "traits"],
 } as const;
 
+/** 回答参照に使える質問コード。schema側でenum化しないとモデルが独自の文字列を返す。 */
+const ANSWER_REF_CODES = Array.from(
+  { length: 20 },
+  (_unused, index) => `q${String(index + 1).padStart(2, "0")}`,
+);
+
 const matchResponseSchema = {
   type: "object",
   properties: {
     messages: {
+      // 件数はプロンプトの指示だけでは守られない。schemaで下限・上限を課す。
       type: "array",
+      minItems: 8,
+      maxItems: 12,
       items: {
         type: "object",
         properties: {
           turnIndex: { type: "integer" },
           speaker: { type: "string", enum: ["user_avatar", "candidate_avatar"] },
           body: { type: "string" },
-          answerRefs: { type: "array", items: { type: "string" } },
+          answerRefs: {
+            type: "array",
+            minItems: 1,
+            items: { type: "string", enum: ANSWER_REF_CODES },
+          },
         },
         required: ["turnIndex", "speaker", "body", "answerRefs"],
       },
@@ -79,6 +103,8 @@ const matchResponseSchema = {
         caution: { type: "string" },
         dimensions: {
           type: "array",
+          minItems: 5,
+          maxItems: 5,
           items: {
             type: "object",
             properties: {
@@ -191,14 +217,16 @@ function parseJson(raw: string): unknown {
  * それでも満たさなければINVALID_OUTPUTとして失敗させ、不正な会話を保存しない。
  */
 export class GeminiAiProvider implements AiProvider {
-  readonly providerId = `gemini:${GEMINI_MODEL}`;
+  /** 生成に使ったモデルをmatch_runsのproviderへ残すため、実際のモデル名を含める。 */
+  readonly providerId: string;
 
   private readonly client: GeminiClient;
   private readonly timeoutMs: number;
 
-  constructor({ client, timeoutMs = GEMINI_TIMEOUT_MS }: GeminiProviderOptions) {
+  constructor({ client, model = GEMINI_MODEL, timeoutMs = GEMINI_TIMEOUT_MS }: GeminiProviderOptions) {
     this.client = client;
     this.timeoutMs = timeoutMs;
+    this.providerId = `gemini:${model}`;
   }
 
   async generateProfile(input: ProfileInput): Promise<AvatarProfileOutput> {
