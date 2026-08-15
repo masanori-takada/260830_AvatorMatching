@@ -14,9 +14,9 @@
 corepack pnpm install
 ```
 
-### Node.jsバージョンについて（既知の食い違い）
+### Node.jsバージョンについて
 
-`package.json` の `engines` は `>=24.0.0 <25.0.0` を要求しているが、検証環境のNodeは `v22.16.0` だった。`corepack pnpm install` / `corepack pnpm run <script>` は engines チェックで警告や失敗を起こすことがある。その場合は `node_modules/.bin/` 以下の実行ファイルを直接呼び出せば支障はない（例: `node_modules/.bin/eslint.CMD .`、`node_modules/.bin/tsc.CMD --noEmit`、`node_modules/.bin/vitest.CMD run`）。
+`package.json` の `engines` は `>=22.0.0` を要求しており、検証環境のNode `v22.16.0` と一致している。以前は `>=24.0.0 <25.0.0` を要求しており実環境（v22系）と食い違っていたが、実態に合わせて修正済み。
 
 ### 環境変数
 

@@ -51,7 +51,7 @@ test("マッチング処理開始後は回答修正ができないことを説�
   await expect(page.getByRole("link", { name: "相性レポートを見る" })).toBeVisible({ timeout: 30_000 });
 
   await page.goto("/mypage");
-  await expect(page.getByRole("status")).toContainText("マッチング開始後は回答を変更できません");
+  await expect(page.getByRole("main").getByRole("status")).toContainText("マッチング開始後は回答を変更できません");
   await expect(page.getByRole("link", { name: "修正する" })).toHaveCount(0);
 
   await page.goto("/interview/1");

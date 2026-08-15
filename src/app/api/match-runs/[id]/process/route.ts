@@ -1,5 +1,11 @@
 import { processOwnedMatch } from "@/features/matching/server/process";
 
+// Gemini呼び出しはGEMINI_TIMEOUT_MS(20秒)まで待つ設計で、
+// スキーマ違反時は1回だけ作り直すため最悪約40秒かかりうる。
+// Vercelの既定の実行時間上限（10〜15秒）では途中で打ち切られて
+// 会話生成が必ず失敗するため、明示的に上限を延長する。
+export const maxDuration = 60;
+
 export async function POST(
   _request: Request,
   context: { params: Promise<{ id: string }> },

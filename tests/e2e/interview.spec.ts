@@ -13,7 +13,12 @@ test("匿名利用者が20問を1画面ずつ回答して20 / 20へ到達する"
         await page.getByRole("button", { name: "送信" }).click();
         // 自由記述はクライアント側で送信するため、失敗しても画面遷移せず、
         // その場に未保存の警告と再送手段を出す(FR-031)。
-        await expect(page.getByRole("alert")).toBeVisible();
+        // 注意: page から直接 getByRole で alert/status 等のライブリージョンロールを
+        // スコープを絞らずに取得すると、画面遷移直後だけ中身を持つNext.jsのルート
+        // アナウンサー(#__next-route-announcer__)と衝突しstrict mode violationになる
+        // ことがある。getByRole("main")等で祖先を絞り込むこと(再発防止テスト:
+        // tests/unit/config/scoped-live-region-locator.test.ts)。
+        await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
         await expect(page).toHaveURL(/\/interview\/4$/);
         await expect(page.getByRole("button", { name: "再送する" })).toBeVisible();
       }

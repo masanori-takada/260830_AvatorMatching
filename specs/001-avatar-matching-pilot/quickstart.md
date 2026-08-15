@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 22系（`package.json` の `engines` は `>=24 <25` だが、`node_modules/.bin/` 直接実行なら支障なし。詳細はREADME参照）
+- Node.js 22系（`package.json` の `engines` は `>=22.0.0` で実環境と一致。詳細はREADME参照）
 - Supabase CLI は導入済み。Docker Desktopは未導入（2026-08-15時点）。
 - Supabase project URL and publishable key（ホスト型クラウドプロジェクト）
 
