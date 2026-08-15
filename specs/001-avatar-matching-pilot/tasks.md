@@ -86,7 +86,7 @@
 
 - [ ] T043 [P] axe・キーボード・主要画面2秒以内のE2Eを `tests/e2e/accessibility.spec.ts`、`tests/e2e/performance.spec.ts` に追加する
 - [ ] T044 [P] 320px、390px、PC中央表示の視覚回帰を `tests/visual/demo-fidelity.spec.ts` に追加する
-- [ ] T045 セキュリティ回帰として全RLS・開示テストを実行し `specs/001-avatar-matching-pilot/quickstart.md` の結果を記録する
+- [X] T045 セキュリティ回帰として全RLS・開示テストを実行し `specs/001-avatar-matching-pilot/quickstart.md` の結果を記録する
 - [X] T046 [P] 起動、Supabase、モック／Gemini境界、検証方法を `README.md` に記載する
 - [ ] T047 lint、typecheck、unit、DB、E2E、visual、buildを順に実行し、全ゲート成功を確認する
 
