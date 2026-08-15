@@ -34,6 +34,6 @@ test("匿名利用者が20問を1画面ずつ回答して20 / 20へ到達する"
 
 test("開始失敗時に再試行案内を表示する", async ({ page }) => {
   await page.goto("/start?error=1");
-  await expect(page.getByRole("alert")).toContainText("もう一度お試しください");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("もう一度お試しください");
   await expect(page.getByRole("button", { name: "インタビューをはじめる" })).toBeVisible();
 });

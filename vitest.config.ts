@@ -8,6 +8,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(currentDirectory, "src"),
+      // server-onlyはimportされただけで例外を投げる実装のため、Node上で動くVitestでは
+      // 動作しない。テストだけスタブへ差し替える(詳細はtests/stubs/server-only.ts参照)。
+      "server-only": resolve(currentDirectory, "tests/stubs/server-only.ts"),
     },
   },
   test: {

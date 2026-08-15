@@ -66,10 +66,12 @@ security invoker
 set search_path = ''
 as $$
 declare
-  owner_id uuid := (select auth.uid());
+  -- 変数名をowner_idにすると on conflict (owner_id) の列参照と衝突し、
+  -- 実行時に42702 (ambiguous_column)で失敗する。列名と重ならない名前にする。
+  current_owner_id uuid := (select auth.uid());
   changed boolean;
 begin
-  if owner_id is null then
+  if current_owner_id is null then
     raise exception 'UNAUTHENTICATED';
   end if;
 
@@ -77,7 +79,7 @@ begin
     owner_id, summary, traits, source_revision, provider
   )
   values (
-    owner_id, p_summary, p_traits, p_source_revision, p_provider
+    current_owner_id, p_summary, p_traits, p_source_revision, p_provider
   )
   on conflict (owner_id) do update
   set summary = excluded.summary,

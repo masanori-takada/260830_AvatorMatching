@@ -1,121 +1,11 @@
-create type public.match_status as enum ('queued', 'processing', 'completed', 'failed');
-create type public.notification_kind as enum ('match_completed', 'report_ready');
-create type public.compatibility_axis as enum (
-  'conversation_flow', 'values_alignment', 'humor_fit', 'mutual_interest', 'mismatch_severity'
-);
-
-create table public.match_runs (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null unique references auth.users(id) on delete cascade,
-  candidate_id uuid not null references public.demo_candidates(id),
-  status public.match_status not null default 'queued',
-  idempotency_key uuid not null unique default gen_random_uuid(),
-  attempt_count smallint not null default 0 check (attempt_count between 0 and 3),
-  provider text not null check (char_length(provider) between 1 and 100),
-  error_code text check (error_code in ('PROVIDER_ERROR', 'INVALID_OUTPUT', 'TIMEOUT', 'INTERNAL_ERROR')),
-  queued_at timestamptz not null default now(),
-  started_at timestamptz,
-  completed_at timestamptz,
-  failed_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create table public.conversation_messages (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
-  match_run_id uuid not null references public.match_runs(id) on delete cascade,
-  turn_index smallint not null check (turn_index >= 1),
-  speaker text not null check (speaker in ('user_avatar', 'candidate_avatar')),
-  body text not null check (char_length(body) between 1 and 1000),
-  answer_refs text[] not null default '{}',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (match_run_id, turn_index)
-);
-
-create table public.compatibility_reports (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
-  match_run_id uuid not null unique references public.match_runs(id) on delete cascade,
-  overall_score smallint not null check (overall_score between 0 and 100),
-  summary text not null check (char_length(summary) between 1 and 1000),
-  caution text not null check (char_length(caution) between 1 and 500),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create table public.compatibility_dimensions (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
-  report_id uuid not null references public.compatibility_reports(id) on delete cascade,
-  axis public.compatibility_axis not null,
-  score smallint not null check (score between 0 and 100),
-  explanation text not null check (char_length(explanation) between 1 and 500),
-  evidence_message_id uuid not null references public.conversation_messages(id),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (report_id, axis)
-);
-
-create table public.notifications (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
-  match_run_id uuid references public.match_runs(id) on delete cascade,
-  kind public.notification_kind not null,
-  title text not null check (char_length(title) between 1 and 120),
-  body text not null check (char_length(body) between 1 and 500),
-  read_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (match_run_id, kind)
-);
-
-create index conversation_messages_owner_idx on public.conversation_messages(owner_id, match_run_id);
-create index compatibility_reports_owner_idx on public.compatibility_reports(owner_id, match_run_id);
-create index compatibility_dimensions_owner_idx on public.compatibility_dimensions(owner_id, report_id);
-create index notifications_owner_created_idx on public.notifications(owner_id, created_at desc);
-
-create trigger match_runs_set_updated_at before update on public.match_runs
-for each row execute function public.set_updated_at();
-create trigger conversation_messages_set_updated_at before update on public.conversation_messages
-for each row execute function public.set_updated_at();
-create trigger compatibility_reports_set_updated_at before update on public.compatibility_reports
-for each row execute function public.set_updated_at();
-create trigger compatibility_dimensions_set_updated_at before update on public.compatibility_dimensions
-for each row execute function public.set_updated_at();
-create trigger notifications_set_updated_at before update on public.notifications
-for each row execute function public.set_updated_at();
-
-alter table public.match_runs enable row level security;
-alter table public.match_runs force row level security;
-alter table public.conversation_messages enable row level security;
-alter table public.conversation_messages force row level security;
-alter table public.compatibility_reports enable row level security;
-alter table public.compatibility_reports force row level security;
-alter table public.compatibility_dimensions enable row level security;
-alter table public.compatibility_dimensions force row level security;
-alter table public.notifications enable row level security;
-alter table public.notifications force row level security;
-
-create policy "match_runs_select_own" on public.match_runs for select to authenticated
-using ((select auth.uid()) = owner_id);
-create policy "conversation_messages_select_own" on public.conversation_messages for select to authenticated
-using ((select auth.uid()) = owner_id);
-create policy "compatibility_reports_select_own" on public.compatibility_reports for select to authenticated
-using ((select auth.uid()) = owner_id);
-create policy "compatibility_dimensions_select_own" on public.compatibility_dimensions for select to authenticated
-using ((select auth.uid()) = owner_id);
-create policy "notifications_select_own" on public.notifications for select to authenticated
-using ((select auth.uid()) = owner_id);
-
-revoke all on table public.match_runs, public.conversation_messages, public.compatibility_reports,
-  public.compatibility_dimensions, public.notifications from public, anon, authenticated;
-grant select on table public.match_runs to authenticated;
-grant select on table public.conversation_messages to authenticated;
-grant select on table public.compatibility_reports to authenticated;
-grant select on table public.compatibility_dimensions to authenticated;
-grant select on table public.notifications to authenticated;
+-- plpgsqlの変数 owner_id が、参照しているテーブルの列 owner_id と衝突し、
+-- 実行時に 42702 (ambiguous_column) で失敗していた。
+--   where run.owner_id = owner_id   -- 右辺の裸の owner_id が変数か列か判別できない
+-- 左辺を修飾しても右辺は曖昧なままで、マッチング系の4関数すべてが該当していた。
+--
+-- 本体は書き換えず、#variable_conflict use_variable を宣言して裸の名前を変数として
+-- 解釈させる。この4関数はいずれも「変数として使う」意図で書かれているため、
+-- 挙動は意図どおりに確定する。insertの列リストは式ではないため影響を受けない。
 
 create or replace function public.start_match_run()
 returns table (match_run_id uuid, status public.match_status)
@@ -305,14 +195,3 @@ begin
   if not found then raise exception 'STATE_CONFLICT'; end if;
 end;
 $$;
-
-revoke all on function public.start_match_run() from public, anon;
-revoke all on function public.claim_match_run(uuid) from public, anon;
-revoke all on function public.complete_match_run(uuid, jsonb) from public, anon;
-revoke all on function public.fail_match_run(uuid, text) from public, anon;
-grant execute on function public.start_match_run() to authenticated;
-grant execute on function public.claim_match_run(uuid) to authenticated;
-grant execute on function public.complete_match_run(uuid, jsonb) to authenticated;
-grant execute on function public.fail_match_run(uuid, text) to authenticated;
-
-alter publication supabase_realtime add table public.match_runs, public.notifications;

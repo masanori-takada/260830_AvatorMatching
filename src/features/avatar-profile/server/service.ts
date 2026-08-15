@@ -111,7 +111,13 @@ export async function completeInterview(): Promise<ActionResult<{
     }
     const actionError = toActionError(error);
     if (actionError.code === "INTERNAL_ERROR") {
-      logError("avatar_profile_completion_failed", { errorName: (error as Error)?.name });
+      // SupabaseのエラーはError型ではなくcodeを持つオブジェクトなので、原因追跡のため
+      // 回答本文を含まない識別子だけを残す。
+      const details = error as { name?: string; code?: string } | null;
+      logError("avatar_profile_completion_failed", {
+        errorName: details?.name,
+        errorCode: details?.code,
+      });
     }
     return failure(actionError.code, actionError.message, actionError.retryable);
   }

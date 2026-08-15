@@ -2,6 +2,7 @@
 
 import { requireUser } from "@/features/identity/server/session";
 import { toActionError } from "@/lib/errors";
+import { logError } from "@/lib/logger";
 import { failure, success, type ActionResult } from "@/lib/result";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -24,6 +25,11 @@ export async function startMatch(): Promise<ActionResult<{ matchRunId: string; s
     return success({ matchRunId: row.match_run_id, status: row.status });
   } catch (error) {
     const actionError = toActionError(error);
+    if (actionError.code === "INTERNAL_ERROR") {
+      // 原因不明のまま利用者が詰まるのを避けるため、回答本文を含まない識別子だけ残す(FR-040)。
+      const details = error as { name?: string; code?: string } | null;
+      logError("match_start_failed", { errorName: details?.name, errorCode: details?.code });
+    }
     return failure(actionError.code, actionError.message, actionError.retryable);
   }
 }

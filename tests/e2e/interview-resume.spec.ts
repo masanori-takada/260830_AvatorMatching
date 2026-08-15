@@ -1,30 +1,17 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const FREE_TEXT_ORDERS = new Set([4, 8, 12, 18, 20]);
-
-async function answerQuestion(page: Page, order: number, text: string) {
-  await expect(page).toHaveURL(new RegExp(`/interview/${order}(?:\\?.*)?$`));
-  if (FREE_TEXT_ORDERS.has(order)) {
-    await page.getByLabel("回答を入力").fill(text);
-    await page.getByRole("button", { name: "送信" }).click();
-  } else {
-    await page.getByRole("group", { name: "回答を選択" }).getByRole("button").first().click();
-  }
-}
+import { createAvatarSummary } from "./support/avatar-summary";
+import { answerInterviewRange, startInterview } from "./support/interview";
 
 async function answerThroughOrder(page: Page, upToOrder: number) {
-  await page.goto("/start");
-  await page.getByRole("button", { name: "インタビューをはじめる" }).click();
-  for (let order = 1; order <= upToOrder; order += 1) {
-    await answerQuestion(page, order, `自由回答 ${order}`);
-  }
+  await startInterview(page);
+  await answerInterviewRange(page, 1, upToOrder);
 }
 
 async function completeAllQuestions(page: Page) {
   await answerThroughOrder(page, 20);
   await expect(page).toHaveURL(/\/interview\/complete$/);
-  await page.getByRole("button").last().click();
-  await expect(page.getByRole("button", { name: "要約を更新する" })).toBeVisible();
+  await createAvatarSummary(page);
 }
 
 test("7問回答後に端末を離れても、再度開くと8問目から再開できる(FR-007)", async ({ page }) => {
@@ -50,6 +37,9 @@ test("マッチング開始前はマイページから回答済み質問を修�
   await page.getByRole("link", { name: "修正する" }).first().click();
   await expect(page).toHaveURL(/\/interview\/1$/);
   await page.getByRole("group", { name: "回答を選択" }).getByRole("button", { name: "家でゆっくりする" }).click();
+  // Server Actionによる保存が完了する前に画面を離れると保存が中断されうるため、
+  // 未回答の次の設問へのリダイレクト完了を待ってから遷移する。
+  await expect(page).toHaveURL(/\/interview\/4$/);
 
   await page.goto("/mypage");
   await expect(page.getByText("家でゆっくりする")).toBeVisible();
