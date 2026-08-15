@@ -11,9 +11,15 @@ describe("avatar_profiles DB契約", () => {
 
     expect(sql).toMatch(/owner_id uuid not null unique references auth\.users\(id\) on delete cascade/i);
     expect(sql).toMatch(/char_length\(summary\) between 1 and 600/i);
-    expect(sql).toMatch(/jsonb_object_length\(traits\) = 6/i);
+    // 「ちょうど6キー」は、6キーの存在確認と、既知キーを除いた残りが空であることの両方で表す。
+    // PostgreSQLに存在しない関数(jsonb_object_length等)を書いても静的検査は通ってしまうため、
+    // 実在する演算子だけで表現していることをここで固定する。
+    expect(sql).not.toMatch(/jsonb_object_length/i);
+    const excessKeyGuard = sql.match(/traits\s*-\s*array\[([\s\S]*?)\]\s*=\s*'\{\}'::jsonb/i);
+    expect(excessKeyGuard).not.toBeNull();
     for (const key of ["leisure", "communication", "lifestyle", "values", "relationships", "priorities"]) {
       expect(sql).toContain(`traits ? '${key}'`);
+      expect(excessKeyGuard![1]).toContain(`'${key}'`);
     }
     expect(sql).toMatch(/source_revision integer not null check \(source_revision >= 20\)/i);
     expect(sql).toMatch(/created_at timestamptz not null default now\(\)/i);

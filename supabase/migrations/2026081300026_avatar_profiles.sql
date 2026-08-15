@@ -4,7 +4,12 @@ create table public.avatar_profiles (
   summary text not null check (char_length(summary) between 1 and 600),
   traits jsonb not null check (
     jsonb_typeof(traits) = 'object'
-    and jsonb_object_length(traits) = 6
+    -- 余分なキーが無いこと。PostgreSQLにはjsonbのキー数を直接返す関数が無いため、
+    -- 既知の6キーを取り除いた残りが空であることで表す。下の6つの存在確認と合わせて
+    -- 「ちょうどこの6キー」を意味する。
+    and traits - array[
+      'leisure', 'communication', 'lifestyle', 'values', 'relationships', 'priorities'
+    ] = '{}'::jsonb
     and traits ? 'leisure'
     and traits ? 'communication'
     and traits ? 'lifestyle'
