@@ -1,0 +1,123 @@
+# AIアバターマッチング 実証パイロット
+
+匿名の20問インタビューに答えると、その回答からAIアバターが作られる。アバターは事前登録された架空のデモ候補のアバターと自動で会話し、その会話をもとに5軸の相性レポートを生成する。利用者は会話ログとレポートを読んだうえで「会ってみたい」または「今回は見送る」を選び、承諾した場合に限って相手の（架空の）名前・所属・紹介文が開示される。
+
+ログインや招待コード入力を必須とせず、決定前は匿名性を保ったまま体験を完結できることを検証するための実証パイロットである。会話・要約・相性評価の生成はAIプロバイダー（モックまたはGemini API）が担い、データはホスト型Supabaseに保存される。
+
+## セットアップと起動
+
+### 依存関係のインストール
+
+このリポジトリは pnpm を使うが、PATHに `pnpm` が入っていない環境がある。その場合は Corepack 経由で実行する。
+
+```bash
+corepack pnpm install
+```
+
+### Node.jsバージョンについて（既知の食い違い）
+
+`package.json` の `engines` は `>=24.0.0 <25.0.0` を要求しているが、検証環境のNodeは `v22.16.0` だった。`corepack pnpm install` / `corepack pnpm run <script>` は engines チェックで警告や失敗を起こすことがある。その場合は `node_modules/.bin/` 以下の実行ファイルを直接呼び出せば支障はない（例: `node_modules/.bin/eslint.CMD .`、`node_modules/.bin/tsc.CMD --noEmit`、`node_modules/.bin/vitest.CMD run`）。
+
+### 環境変数
+
+`.env.example` を `.env.local` にコピーし、値を埋める。
+
+```bash
+cp .env.example .env.local
+```
+
+### 開発サーバーの起動
+
+```bash
+corepack pnpm dev
+```
+
+## 環境変数一覧
+
+実際の値（URL・APIキーなど）はここには書かない。`.env.local` に以下を設定する。
+
+| 変数名 | 必須 | 意味 |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | 必須 | SupabaseプロジェクトのURL。クライアントバンドルに含まれる。 |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 必須 | Supabaseの公開可能キー。クライアントバンドルに含まれる。 |
+| `AI_PROVIDER` | 必須 | `mock` または `gemini`。会話・要約・相性評価をどちらの実装で生成するか。 |
+| `GEMINI_API_KEY` | `AI_PROVIDER=gemini` のときのみ必須 | Gemini APIキー。サーバー専用（`server-only`によりクライアントバンドルからのimportをビルド時に検出）。 |
+| `GEMINI_MODEL` | 任意 | Geminiのモデル名を差し替える場合に指定。未設定時の既定は後述。 |
+
+## Supabase
+
+ホスト型（クラウド）のSupabaseプロジェクトを使用する。ローカルDockerスタックは前提にしていない。
+
+- ログインとプロジェクトのリンクは対話的な認証が必要なため、利用者自身が事前に実行する。
+  ```bash
+  corepack pnpm exec supabase login
+  corepack pnpm exec supabase link
+  ```
+- マイグレーションの反映:
+  ```bash
+  corepack pnpm exec supabase db push
+  ```
+- マイグレーションSQLは `supabase/migrations/` に、DBテスト（pgTAP）は `supabase/tests/database/` にある。
+
+## モック／Gemini の境界
+
+会話・要約・相性評価の生成は `src/lib/ai/provider.ts` の `getAiProvider()` が `AI_PROVIDER` に応じて切り替える。
+
+- **`AI_PROVIDER=mock`**: `src/lib/ai/mock-provider.ts` を使う。外部通信を行わず、決定的な出力を返す。E2Eテストはこちらで実行する。
+- **`AI_PROVIDER=gemini`**: `src/lib/ai/gemini-provider.ts` の `GeminiAiProvider` が `@google/genai` 経由でGemini APIを呼び出す。
+- **`GEMINI_API_KEY` が未設定のまま `AI_PROVIDER=gemini` にすると、モックへは自動フォールバックせず、その場でエラーを投げて起動・実行を失敗させる。** これは「気づかないままモックの偽の結果を本物の生成結果だと誤認しない」ための意図的な設計であり、`src/lib/ai/provider.ts` に明記されている。
+- **既定モデルとタイムアウト**（`src/lib/ai/gemini-provider.ts` の実値）:
+  - 既定モデル: `gemini-3.5-flash-lite`（`GEMINI_MODEL` 環境変数で差し替え可能）
+  - 生成1回あたりのタイムアウト: `20_000` ミリ秒（20秒）
+  - 契約（Zodスキーマ）を満たさない出力は1回だけ作り直し、それでも満たさない場合は `INVALID_OUTPUT` として失敗させ、不正な会話・レポートを保存しない。
+
+### プライバシー境界
+
+AIへ渡す前に `src/lib/ai/privacy-provider.ts` の `PrivacySafeAiProvider` が自由記述回答をサニタイズする（`GeminiAiProvider` / `MockAiProvider` は必ずこのラッパー越しに呼ばれる）。
+
+- 自由記述の回答から、氏名・会社名・所属などの明示的な識別情報（「名前は◯◯」「◯◯と申します」「◯◯です」形式の氏名等）を `[非公開]` に置き換えてから生成器へ渡す（`redactSelfDisclosedIdentity`）。趣味・価値観などの内容そのものは残す。
+- メールアドレス・URL・郵便番号・電話番号形式の文字列、および固定の架空デモ候補名（`redactPotentialPii` が定義するパターン）も除去対象。
+- 生成後の出力に対しても、除去前の自由記述回答から抽出した識別情報の断片が含まれていないかを再チェックし（`assertNoPrivateAnswerLeak`）、含まれていた場合はエラーとして出力を破棄する。入口（生成前のサニタイズ）と出口（生成後の漏洩検査）で同じパターン集合を使うことで、片方だけを緩めた結果の漏洩・誤検知を防いでいる。
+
+## 検証方法
+
+### 実行できるゲート
+
+`package.json` の `scripts` にあるコマンドのみを記載する。
+
+| コマンド | 内容 |
+| --- | --- |
+| `corepack pnpm run typecheck` | `tsc --noEmit` |
+| `corepack pnpm run lint` | `eslint .` |
+| `corepack pnpm run test` | `vitest run`（ユニット・統合テスト） |
+| `corepack pnpm run build` | `next build` |
+| `corepack pnpm run test:e2e` | `playwright test --grep-invert @visual`（`@visual`タグ以外のE2E） |
+| `corepack pnpm run test:visual` | `playwright test --grep @visual`（視覚回帰） |
+
+E2E・視覚回帰は `AI_PROVIDER=mock` で実行すること。外部APIへ実際に接続せず、決定的な結果でテストできる。
+
+### 実行できないゲート
+
+- **pgTAP（`corepack pnpm run test:db` = `supabase test db`）は実行できない。** 検証環境にDockerが導入されていないため。`supabase/tests/database/` にSQLは書かれているが、未実行のままである。
+- 代わりに `tests/unit/config/*-db-contract.test.ts`（`vitest run` の対象に含まれる）が、マイグレーションSQLの内容を静的に検証している（テーブル定義・制約・RLSポリシーの記述などをソースコードとして検査するもので、実際にDBへ適用して確認するものではない）。
+
+### 既知の制約: Supabase匿名サインインのレート上限
+
+Supabaseの匿名サインインにはレート上限がある。E2Eフルスイート（`test:e2e` / `test:visual`）を短時間に何度も連続実行すると、`anonymous_session_failed` エラーで全テストが失敗することがある。これはアプリケーションコードの不具合ではなく、Supabase側のレート制限によるものなので、時間を置いて再実行する。
+
+## プロジェクト構成
+
+| ディレクトリ | 役割 |
+| --- | --- |
+| `src/app/` | Next.js App Router。ページ・APIルート（`src/app/(journey)`、`src/app/api`）。 |
+| `src/features/` | 機能単位のドメインロジック・UI（`interview`、`matching`、`decision`、`avatar-profile`、`identity`、`notifications`）。 |
+| `src/lib/ai/` | AIプロバイダー抽象化。`provider.ts`（切り替え）、`mock-provider.ts`、`gemini-provider.ts`、`privacy-provider.ts`（プライバシー境界）、`schemas.ts`（出力契約・PII検査）。 |
+| `src/lib/env/` | 環境変数の検証。`public.ts`（クライアントへ露出してよい変数）、`server.ts`（サーバー専用変数）。 |
+| `src/lib/supabase/` | Supabaseクライアント初期化（`client.ts`、`server.ts`、`proxy.ts`）。 |
+| `src/components/` | 共有UIコンポーネント。 |
+| `supabase/migrations/` | データベースマイグレーションSQL。 |
+| `supabase/tests/database/` | pgTAPテスト（現状未実行。上記「検証方法」参照）。 |
+| `tests/unit/` | ユニットテスト（`vitest`）。DB契約の静的検証を含む。 |
+| `tests/integration/`, `tests/contract/` | 統合・契約テスト（`vitest`）。 |
+| `tests/e2e/`, `tests/visual/` | E2E・視覚回帰テスト（`playwright`）。 |
+| `specs/001-avatar-matching-pilot/` | 仕様書・実装計画・タスク一覧。 |
