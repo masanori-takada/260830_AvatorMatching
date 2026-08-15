@@ -59,19 +59,19 @@
 
 **Independent Test**: 7問後に再読込して第8問から再開し、開始前は修正、開始後は拒否される。
 
-- [ ] T031 [P] [US4] draftとrevision競合テストを `tests/unit/interview/draft-store.test.ts`、`tests/integration/interview/revision.test.ts` に作成する
-- [ ] T032 [US4] 一時保存と再送を `src/features/interview/client/draft-store.ts`、`use-answer-submit.ts` に実装する
-- [ ] T033 [US4] 回答一覧と修正導線を `src/app/(journey)/mypage/page.tsx` と `src/components/interview/answer-list.tsx` に実装する
-- [ ] T034 [US4] 再開・修正・開始後ロックを `tests/e2e/interview-resume.spec.ts` で検証する
+- [X] T031 [P] [US4] draftとrevision競合テストを `tests/unit/interview/draft-store.test.ts`、`tests/integration/interview/revision.test.ts` に作成する
+- [X] T032 [US4] 一時保存と再送を `src/features/interview/client/draft-store.ts`、`use-answer-submit.ts` に実装する
+- [X] T033 [US4] 回答一覧と修正導線を `src/app/(journey)/mypage/page.tsx` と `src/components/interview/answer-list.tsx` に実装する
+- [X] T034 [US4] 再開・修正・開始後ロックを `tests/e2e/interview-resume.spec.ts` で検証する
 
 ## Phase 7: User Story 5 - ホームと現在地 (P2)
 
 **Independent Test**: interview、processing、completedの各状態で正しい主操作が表示される。
 
-- [ ] T035 [P] [US5] journey状態導出テストを `tests/unit/home/journey-state.test.ts` に作成する
-- [ ] T036 [US5] 状態導出と画面ガードを `src/features/matching/server/journey-state.ts`、`src/app/page.tsx` に実装する
-- [ ] T037 [US5] 忠実なホームと下部ナビを `src/app/(journey)/home/page.tsx`、`src/components/home/`、`src/components/app-shell/bottom-nav.tsx` に実装する
-- [ ] T038 [US5] 3状態の主操作と直接URLガードを `tests/e2e/home-state.spec.ts` で検証する
+- [X] T035 [P] [US5] journey状態導出テストを `tests/unit/home/journey-state.test.ts` に作成する
+- [X] T036 [US5] 状態導出と画面ガードを `src/features/matching/server/journey-state.ts`、`src/app/page.tsx` に実装する
+- [X] T037 [US5] 忠実なホームと下部ナビを `src/app/(journey)/home/page.tsx`、`src/components/home/`、`src/components/app-shell/bottom-nav.tsx` に実装する
+- [X] T038 [US5] 3状態の主操作と直接URLガードを `tests/e2e/home-state.spec.ts` で検証する
 
 ## Phase 8: User Story 6 - プライバシー・FAQ・リセット (P3)
 

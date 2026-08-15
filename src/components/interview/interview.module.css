@@ -131,12 +131,86 @@
   margin: var(--space-12) 0 0;
 }
 
+/* 自由記述の送信失敗時: 未保存であることの明示と再送手段(FR-031、エッジケース) */
+.unsavedNotice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.unsavedLabel {
+  color: var(--color-danger);
+  font-size: 13px;
+  font-weight: 700;
+  margin: var(--space-12) 0 0;
+}
+
 .start,
 .complete {
   display: flex;
   flex-direction: column;
   gap: var(--space-16);
   padding-top: var(--space-24);
+}
+
+/* マイページ: 現在のステップ要約カード */
+.summaryCard {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  margin: var(--space-16) 0;
+  padding: var(--space-16);
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: var(--space-22) 0 var(--space-10);
+}
+
+/* マイページ: 回答一覧 */
+.answerList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+
+.answerCard {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-14);
+}
+
+.answerPrompt {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0 0 var(--space-4);
+}
+
+.answerBody {
+  color: var(--color-text);
+  font-size: 14px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.answerUnanswered {
+  color: var(--color-subtext);
+}
+
+.answerEdit {
+  color: var(--color-wine);
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: var(--space-8);
+  text-decoration: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

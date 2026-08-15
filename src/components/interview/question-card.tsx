@@ -7,9 +7,11 @@ type QuestionCardProps = {
   action: (formData: FormData) => void | Promise<void>;
   answer?: InterviewAnswer;
   question: InterviewQuestion;
+  userId: string;
+  expectedRevision: number | null;
 };
 
-export function QuestionCard({ action, answer, question }: QuestionCardProps) {
+export function QuestionCard({ action, answer, question, userId, expectedRevision }: QuestionCardProps) {
   return (
     <section aria-labelledby={`${question.code}-prompt`} className={styles.card}>
       <p className={styles.category}>{question.category}</p>
@@ -17,7 +19,12 @@ export function QuestionCard({ action, answer, question }: QuestionCardProps) {
       {question.kind === "choice" ? (
         <ChoiceAnswer action={action} currentAnswer={answer?.answer} question={question} />
       ) : (
-        <TextAnswer action={action} currentAnswer={answer?.answer} question={question} />
+        <TextAnswer
+          currentAnswer={answer?.answer}
+          expectedRevision={expectedRevision}
+          question={question}
+          userId={userId}
+        />
       )}
     </section>
   );

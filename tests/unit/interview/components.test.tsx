@@ -1,13 +1,31 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// TextAnswerがクライアントコンポーネント化されuseRouterを呼ぶため、
+// QuestionCardの表示だけを検証するテストでもnext/navigationのモックが必要になる。
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 import { Progress } from "@/components/interview/progress";
 import { QuestionCard } from "@/components/interview/question-card";
 import { INTERVIEW_QUESTIONS } from "@/features/interview/domain";
 
+const userId = "11111111-1111-1111-1111-111111111111";
+
 describe("インタビュー画面部品", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+  afterEach(cleanup);
+
   it("渡された1問だけを表示する", () => {
-    render(<QuestionCard action={vi.fn()} question={INTERVIEW_QUESTIONS[0]!} />);
+    render(
+      <QuestionCard
+        action={vi.fn()}
+        expectedRevision={null}
+        question={INTERVIEW_QUESTIONS[0]!}
+        userId={userId}
+      />,
+    );
 
     expect(screen.getByRole("heading", { name: "休日の過ごし方に最も近いのは？" })).toBeVisible();
     expect(screen.getAllByRole("button")).toHaveLength(3);
@@ -23,7 +41,14 @@ describe("インタビュー画面部品", () => {
   });
 
   it("絵文字を含む500文字をサーバーと同じコードポイント単位で扱える", () => {
-    render(<QuestionCard action={vi.fn()} question={INTERVIEW_QUESTIONS[19]!} />);
+    render(
+      <QuestionCard
+        action={vi.fn()}
+        expectedRevision={null}
+        question={INTERVIEW_QUESTIONS[19]!}
+        userId={userId}
+      />,
+    );
 
     expect(screen.getByLabelText("回答を入力")).not.toHaveAttribute("maxlength");
     expect(screen.getByText("500文字以内")).toBeVisible();

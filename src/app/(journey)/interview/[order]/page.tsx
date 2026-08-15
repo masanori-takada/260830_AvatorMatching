@@ -57,7 +57,13 @@ export default async function InterviewPage({ params, searchParams }: InterviewP
       {state.locked ? (
         <p className={styles.error} role="status">マッチング開始後は回答を変更できません。</p>
       ) : (
-        <QuestionCard action={submit} answer={answer} question={question} />
+        <QuestionCard
+          action={submit}
+          answer={answer}
+          expectedRevision={answer?.revision ?? null}
+          question={question}
+          userId={userId}
+        />
       )}
     </AppShell>
   );
