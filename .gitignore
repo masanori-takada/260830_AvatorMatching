@@ -19,3 +19,6 @@ public/app-assets/**/*.doc
 public/app-assets/**/*.docx
 public/app-assets/**/*.xls
 public/app-assets/**/*.xlsx
+
+# 作業用の大容量デモ動画(2.7MB)はリポジトリへ含めない
+avatar-matching-demo-flow-v3.gif
