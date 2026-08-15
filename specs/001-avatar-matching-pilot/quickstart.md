@@ -19,6 +19,12 @@ cp .env.example .env.local
 
 `SUPABASE_SERVICE_ROLE_KEY` は初期版の通常フローに不要であり、ブラウザ公開変数へ設定しない。
 
+`ACCESS_CODE`（限定公開の合言葉ゲート）は未設定のままでよい。空にしておけばゲートは無効になり、
+ローカル開発・下記のAutomated gatesはこれまで通りゲート無しで通る。合言葉ゲートを含めて
+E2E・視覚回帰を検証したい場合だけ、`.claude/launch.json` の `avatar-matching-e2e` 設定
+（port 3200）を使い、同じ `ACCESS_CODE` をPlaywright実行プロセス側にも設定して
+`tests/e2e/access-gate.spec.ts` を含むフルスイートを実行する。
+
 ## Supabase
 
 ホスト型（クラウド）のSupabaseプロジェクトへ直接つなぐ。ローカルSupabase起動・pgTAPはDocker未導入のため実行できない。

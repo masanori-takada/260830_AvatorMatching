@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./support/access-gate";
 
 import { createAvatarSummary } from "./support/avatar-summary";
 import { answerInterviewRange, completeInterview, startInterview } from "./support/interview";

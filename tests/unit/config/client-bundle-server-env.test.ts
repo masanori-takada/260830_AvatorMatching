@@ -8,7 +8,7 @@ const srcDir = resolve(process.cwd(), "src");
  * サーバー専用として扱う環境変数名。クライアントバンドルの到達範囲に
  * これらの識別子が現れてはならない。
  */
-const SERVER_ONLY_ENV_NAMES = ["AI_PROVIDER", "GEMINI_API_KEY", "SERVICE_ROLE"];
+const SERVER_ONLY_ENV_NAMES = ["AI_PROVIDER", "GEMINI_API_KEY", "SERVICE_ROLE", "ACCESS_CODE"];
 
 /** "use client"を先頭付近に持つソースファイルを全て集める。 */
 function findClientEntryFiles(dir: string): string[] {

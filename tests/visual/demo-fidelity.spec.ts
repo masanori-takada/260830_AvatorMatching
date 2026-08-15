@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "../e2e/support/access-gate";
 
 import { createAvatarSummary } from "../e2e/support/avatar-summary";
 import { answerInterviewRange, completeInterview } from "../e2e/support/interview";

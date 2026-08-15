@@ -11,6 +11,14 @@ const schema = z
     AI_PROVIDER: z.enum(["mock", "gemini"]),
     // AI_PROVIDER=geminiのときだけ必須。それ以外(mock)では未設定でよい。
     GEMINI_API_KEY: z.string().min(1).optional(),
+    // 合言葉ゲート(src/proxy.ts)で使う。未設定ならゲートは無効(=誰でもアクセス可能)になる。
+    // 「設定し忘れると公開状態になる」ことを意味するため、本番運用では必ず設定すること。
+    // .env.example上は値を空のままにする運用のため、空文字列も「未設定」として扱い
+    // (min(1)で弾いて例外にはしない)、全体の検証が落ちないようにする。
+    ACCESS_CODE: z
+      .string()
+      .optional()
+      .transform((value) => (value && value.length > 0 ? value : undefined)),
   })
   .superRefine((value, context) => {
     if (value.AI_PROVIDER === "gemini" && !value.GEMINI_API_KEY) {
@@ -33,5 +41,6 @@ export function getServerEnv() {
   return parseServerEnv({
     AI_PROVIDER: process.env.AI_PROVIDER,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    ACCESS_CODE: process.env.ACCESS_CODE,
   });
 }

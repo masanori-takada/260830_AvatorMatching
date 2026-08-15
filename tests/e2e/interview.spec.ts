@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/access-gate";
 
 test("匿名利用者が20問を1画面ずつ回答して20 / 20へ到達する", async ({ page }) => {
   await page.goto("/start");

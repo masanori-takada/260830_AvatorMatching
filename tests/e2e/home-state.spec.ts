@@ -1,12 +1,13 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, passAccessGate, test } from "./support/access-gate";
 import { createAvatarSummary } from "./support/avatar-summary";
 import { answerInterviewRange, startInterview } from "./support/interview";
 
 test("未開始のブラウザでルートへ直接アクセスすると開始画面へ案内する(FR-036)", async ({ browser }) => {
   // 匿名セッションのCookieを持たない新規コンテキストで検証する。
+  // (合言葉ゲートのクッキーは無いので、まず`passAccessGate`で通過させる)
   const context = await browser.newContext();
   const page = await context.newPage();
+  await passAccessGate(page);
   await page.goto("/");
   await expect(page).toHaveURL(/\/start$/);
   await context.close();

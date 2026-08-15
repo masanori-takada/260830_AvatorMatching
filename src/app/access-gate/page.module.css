@@ -1,0 +1,65 @@
+.gate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding-top: var(--space-24);
+}
+
+.title {
+  font-size: 20px;
+  line-height: 1.35;
+  margin: var(--space-8) 0 0;
+}
+
+.copy {
+  color: var(--color-subtext);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.input {
+  background: var(--color-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-button);
+  color: var(--color-text);
+  font-size: 16px;
+  min-height: 48px;
+  padding: var(--space-10) var(--space-14);
+  width: 100%;
+}
+
+.submit {
+  background: var(--color-wine);
+  border: 0;
+  border-radius: var(--radius-button);
+  color: var(--color-card);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  min-height: 50px;
+  padding: var(--space-8) var(--space-16);
+  width: 100%;
+}
+
+.submit:active {
+  background: var(--color-wine-deep);
+  color: var(--color-card);
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 12px;
+  margin: 0;
+}

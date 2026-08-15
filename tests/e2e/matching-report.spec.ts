@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/access-gate";
 
 import { createAvatarSummary } from "./support/avatar-summary";
 import { completeInterview } from "./support/interview";

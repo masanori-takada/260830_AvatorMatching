@@ -43,6 +43,7 @@ corepack pnpm dev
 | `AI_PROVIDER` | 必須 | `mock` または `gemini`。会話・要約・相性評価をどちらの実装で生成するか。 |
 | `GEMINI_API_KEY` | `AI_PROVIDER=gemini` のときのみ必須 | Gemini APIキー。サーバー専用（`server-only`によりクライアントバンドルからのimportをビルド時に検出）。 |
 | `GEMINI_MODEL` | 任意 | Geminiのモデル名を差し替える場合に指定。未設定時の既定は後述。 |
+| `ACCESS_CODE` | 任意 | 限定公開用の合言葉ゲート（`src/proxy.ts`）で使う合言葉。**未設定の場合、ゲートは無効になり誰でもアプリへアクセスできる。** 本番で限定公開にする場合は必ず設定すること。サーバー専用（`src/lib/env/server.ts`）で、クライアントバンドルには含まれない。合言葉はクッキーへそのまま保存せず、`node:crypto`のHMACで導出した値だけを保存し、比較はタイミング安全（`timingSafeEqual`）に行う。 |
 
 ## Supabase
 
@@ -95,6 +96,14 @@ AIへ渡す前に `src/lib/ai/privacy-provider.ts` の `PrivacySafeAiProvider` �
 | `corepack pnpm run test:visual` | `playwright test --grep @visual`（視覚回帰） |
 
 E2E・視覚回帰は `AI_PROVIDER=mock` で実行すること。外部APIへ実際に接続せず、決定的な結果でテストできる。
+
+合言葉ゲートを含めてE2E・視覚回帰を実行するには、テストサーバーに `ACCESS_CODE` を設定して起動する。値は `tests/e2e/support/access-gate.ts` の `ACCESS_CODE` 定数が唯一の定義元で、サーバーへ渡す値もこれと一致させる。ゲート通過処理も同ファイルにまとまっており、各specはそこから `test` / `expect` をimportするだけでよい。
+
+```bash
+AI_PROVIDER=mock ACCESS_CODE="e2e-test-passphrase-not-the-real-one" node node_modules/next/dist/bin/next start -p 3200
+```
+
+`.claude/launch.json` の `avatar-matching-e2e` にも同じ `env` を書いてあるが、**起動ツール経由では `env` が渡らないことがある**。その場合ゲートが無効な状態で起動し、`tests/e2e/access-gate.spec.ts` が「ゲート画面が出ない」ため失敗する。ゲートが効いているかは `curl -i http://localhost:3200/start` が `/access-gate` へリダイレクトするかで確認できる。上のコマンドで直接起動すれば確実。
 
 ### 実行できないゲート
 
