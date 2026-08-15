@@ -77,10 +77,10 @@
 
 **Independent Test**: 説明を閲覧し、確認付きリセットで自分のデータだけが消え第1問へ戻る。
 
-- [ ] T039 [P] [US6] リセット分離のpgTAPを `supabase/tests/database/004_reset.test.sql` に作成する
-- [ ] T040 [US6] reset RPCとActionを `supabase/migrations/202608130005_reset.sql`、`src/features/identity/server/reset-action.ts` に実装する
-- [ ] T041 [P] [US6] プライバシーとFAQを `src/app/(journey)/privacy/page.tsx`、`faq/page.tsx` に実装する
-- [ ] T042 [US6] 設定と確認付きリセットを `src/app/(journey)/settings/page.tsx` と `tests/e2e/reset.spec.ts` に実装する
+- [X] T039 [P] [US6] リセット分離のpgTAPを `supabase/tests/database/004_reset.test.sql` に作成する
+- [X] T040 [US6] reset RPCとActionを `supabase/migrations/202608150003_reset.sql`、`src/features/identity/server/reset-action.ts` に実装する
+- [X] T041 [P] [US6] プライバシーとFAQを `src/app/(journey)/privacy/page.tsx`、`faq/page.tsx` に実装する
+- [X] T042 [US6] 設定と確認付きリセットを `src/app/(journey)/settings/page.tsx` と `tests/e2e/reset.spec.ts` に実装する
 
 ## Phase 9: Polish & Cross-Cutting
 

@@ -9,3 +9,25 @@
 .time { color: var(--color-subtext); display: block; font-size: 11px; margin-top: var(--space-4); }
 .empty { background: var(--color-card); border-radius: var(--radius-card); padding: var(--space-18); }
 .error { color: var(--color-danger); }
+
+.docCard { background: var(--color-card); border-radius: var(--radius-card); margin-bottom: var(--space-10); padding: var(--space-16); }
+.docHeading { color: var(--color-wine); font-size: 16px; margin: 0 0 var(--space-6); }
+.docBody { color: var(--color-subtext); line-height: 1.7; margin: 0; }
+
+.faqItem { background: var(--color-card); border-radius: var(--radius-card); margin-bottom: var(--space-10); padding: var(--space-16); }
+.faqQuestion { cursor: pointer; font-weight: 700; }
+.faqQuestion:focus-visible { outline: 2px solid var(--color-wine); outline-offset: 2px; }
+.faqAnswer { color: var(--color-subtext); line-height: 1.7; margin: var(--space-10) 0 0; }
+
+.card { background: var(--color-card); border-radius: var(--radius-card); margin-bottom: var(--space-10); padding: var(--space-16); }
+.toggleRow { align-items: center; display: flex; justify-content: space-between; }
+.toggleLabel { font-weight: 700; }
+.note { color: var(--color-subtext); font-size: 13px; line-height: 1.6; margin: var(--space-8) 0 0; }
+
+.list { background: var(--color-card); border-radius: var(--radius-card); overflow: hidden; }
+.listItem { align-items: center; color: var(--color-text); display: flex; justify-content: space-between; padding: var(--space-14) var(--space-16); text-decoration: none; }
+.listItem:not(:last-child) { border-bottom: 1px solid var(--color-border); }
+.listItem:focus-visible { outline: 2px solid var(--color-wine); outline-offset: -2px; }
+
+.linkButton { background: transparent; border: 1px solid var(--color-wine); border-radius: var(--radius-pill); color: var(--color-wine); display: inline-block; font-weight: 700; margin-top: var(--space-8); min-height: 44px; padding: var(--space-10) var(--space-18); text-decoration: none; }
+.linkButton:focus-visible { outline: 2px solid var(--color-wine); outline-offset: 2px; }
