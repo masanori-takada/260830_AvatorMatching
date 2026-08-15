@@ -51,7 +51,10 @@ describe("matching DB契約", () => {
 
   it("pgTAPが所有権・stale profile・必須refs・再試行・冪等完了を検証する", () => {
     const sql = readFileSync(pgTapPath, "utf8");
-    expect(sql).toMatch(/select plan\(24\)/i);
+    // plan(N)は実際のアサーション数と一致させる(数値のハードコードは更新漏れで赤コミットを招くため)。
+    const planned = Number(sql.match(/select plan\((\d+)\)/i)?.[1]);
+    const asserted = sql.match(/^select (?:is|isnt|ok|throws_ok|lives_ok|has_\w+)\b/gim)?.length ?? 0;
+    expect(planned).toBe(asserted);
     for (const contract of [
       "他ownerはclaimできない", "他ownerはcompleteできない", "古いプロフィールでは開始しない",
       "answerRefs欠落を拒否する", "answerRefs nullを拒否する", "answerRefs非arrayを拒否する",

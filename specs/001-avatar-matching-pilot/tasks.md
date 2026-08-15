@@ -48,12 +48,12 @@
 
 **Independent Test**: 承諾だけが架空プロフィールを返し、未決定・辞退・別利用者では0件になる。
 
-- [ ] T025 [P] [US3] 決定一意性と開示境界のpgTAPを `supabase/tests/database/003_decision_reveal.test.sql` に作成する
-- [ ] T026 [P] [US3] Action契約テストを `tests/integration/decision/actions.test.ts` に作成する
-- [ ] T027 [US3] decisionと開示RPCを `supabase/migrations/202608130004_decision_reveal.sql` に実装する
-- [ ] T028 [US3] 決定Actionと開示queryを `src/features/decision/server/actions.ts`、`queries.ts` に実装する
-- [ ] T029 [US3] 確認、開示、辞退画面を `src/components/feedback/decision-dialog.tsx`、`src/app/(journey)/reveal/`、`declined/` に実装する
-- [ ] T030 [US3] 承諾・辞退・承諾前漏洩を `tests/e2e/decision-reveal.spec.ts` で検証する
+- [X] T025 [P] [US3] 決定一意性と開示境界のpgTAPを `supabase/tests/database/003_decision_reveal.test.sql` に作成する
+- [X] T026 [P] [US3] Action契約テストを `tests/integration/decision/actions.test.ts` に作成する
+- [X] T027 [US3] decisionと開示RPCを `supabase/migrations/202608130004_decision_reveal.sql` に実装する
+- [X] T028 [US3] 決定Actionと開示queryを `src/features/decision/server/actions.ts`、`queries.ts` に実装する
+- [X] T029 [US3] 確認、開示、辞退画面を `src/components/feedback/decision-dialog.tsx`、`src/app/(journey)/reveal/`、`declined/` に実装する
+- [X] T030 [US3] 承諾・辞退・承諾前漏洩を `tests/e2e/decision-reveal.spec.ts` で検証する
 
 ## Phase 6: User Story 4 - 中断・再開・修正 (P2)
 
