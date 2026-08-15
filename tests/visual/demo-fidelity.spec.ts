@@ -21,19 +21,25 @@ async function assertNoHorizontalScroll(page: Page, viewportWidth: number): Prom
 async function captureScreen(page: Page, screenName: string): Promise<void> {
   const phone = page.locator('[aria-label="アプリ画面"]');
 
+  // 通知カード等の<time>要素は実行のたびに現在時刻から生成され値が変わるため、
+  // スクリーンショット比較の対象から除外する(単色でマスクする)。
+  // <time>要素の有無や配置(レイアウト)自体はマスク後も比較され続けるため、
+  // マスクしても検証としての意味は失われない。画面を限定せず全画面に一律適用する。
+  const timeElements = page.locator("time");
+
   await page.setViewportSize({ width: 320, height: 812 });
   await assertNoHorizontalScroll(page, 320);
-  await expect(phone).toHaveScreenshot(`${screenName}-320.png`, { animations: "disabled" });
+  await expect(phone).toHaveScreenshot(`${screenName}-320.png`, { animations: "disabled", mask: [timeElements] });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await assertNoHorizontalScroll(page, 390);
-  await expect(phone).toHaveScreenshot(`${screenName}-390.png`, { animations: "disabled" });
+  await expect(phone).toHaveScreenshot(`${screenName}-390.png`, { animations: "disabled", mask: [timeElements] });
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await assertNoHorizontalScroll(page, 1440);
   const phoneBox = await phone.boundingBox();
   expect(phoneBox?.width).toBe(390);
-  await expect(phone).toHaveScreenshot(`${screenName}-desktop.png`, { animations: "disabled" });
+  await expect(phone).toHaveScreenshot(`${screenName}-desktop.png`, { animations: "disabled", mask: [timeElements] });
 }
 
 test.describe("@visual demo fidelity (FR-037, SC-010, SC-012)", () => {
