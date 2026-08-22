@@ -1,4 +1,4 @@
-import { generateValidated } from "@/lib/ai/generation";
+import { AiProviderError, generateValidated } from "@/lib/ai/generation";
 import { ANSWER_REF_CODES, buildMatchPrompt, buildProfilePrompt } from "@/lib/ai/prompts";
 import { assertAnswerRefsAreDisclosed, avatarProfileOutputSchema, matchOutputSchema } from "@/lib/ai/schemas";
 import type {
@@ -166,6 +166,28 @@ export class OpenAiAiProvider implements AiProvider {
   }
 }
 
+/**
+ * OpenAIのエラーレスポンス(`{ error: { type, code, message, ... } }`)から、
+ * 種別(type)とコード(code)だけを取り出す。messageは利用者の回答本文をそのまま含む
+ * 保証がないため意図的に読まず、本文丸ごとのログ出力(禁止事項)も避ける。
+ * JSONとして解釈できない・想定形と異なる場合はどちらもundefinedのまま返す
+ * (ステータスコードだけは呼び出し元がresponse.statusから別途保持している)。
+ */
+async function extractOpenAiErrorDetails(
+  response: Response,
+): Promise<{ apiErrorType?: string; apiErrorCode?: string }> {
+  try {
+    const body = (await response.json()) as { error?: { type?: unknown; code?: unknown } };
+    const apiErrorType = typeof body.error?.type === "string" ? body.error.type : undefined;
+    const apiErrorCode = typeof body.error?.code === "string" || typeof body.error?.code === "number"
+      ? String(body.error.code)
+      : undefined;
+    return { apiErrorType, apiErrorCode };
+  } catch {
+    return {};
+  }
+}
+
 type CreateOpenAiClientOptions = {
   apiKey: string;
   model: string;
@@ -201,10 +223,14 @@ export function createOpenAiClient({ apiKey, model }: CreateOpenAiClientOptions)
       });
 
       if (!response.ok) {
-        // レスポンス本文にAPIキーは含まれないが、念のためステータスとエラーコードだけを残す。
-        const body = await response.text().catch(() => "");
-        throw new Error(
-          `INVALID_OUTPUT: OpenAI APIがエラーを返しました(status=${response.status})。${body.slice(0, 300)}`,
+        // エラーレスポンス本文をそのまま丸ごとは残さない(何が入るか保証できないため)。
+        // OpenAIのエラーレスポンスが持つerror.type/error.codeという「種別・コード」だけを
+        // 取り出す(FR-040)。本文の解析に失敗してもtype/codeがundefinedになるだけで、
+        // ステータスコードは診断情報として残る。
+        const { apiErrorType, apiErrorCode } = await extractOpenAiErrorDetails(response);
+        throw new AiProviderError(
+          `HTTP_ERROR: OpenAI APIがエラーを返しました(status=${response.status})。`,
+          { provider: "OpenAI", kind: "http_error", httpStatus: response.status, apiErrorType, apiErrorCode },
         );
       }
 
@@ -213,7 +239,10 @@ export function createOpenAiClient({ apiKey, model }: CreateOpenAiClientOptions)
       };
       const text = data.choices?.[0]?.message?.content;
       if (!text) {
-        throw new Error("INVALID_OUTPUT: OpenAIの応答が空でした。");
+        throw new AiProviderError(
+          "INVALID_OUTPUT: OpenAIの応答が空でした。",
+          { provider: "OpenAI", kind: "contract_violation" },
+        );
       }
       return text;
     },

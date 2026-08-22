@@ -1,4 +1,4 @@
-import { generateValidated } from "@/lib/ai/generation";
+import { AiProviderError, generateValidated } from "@/lib/ai/generation";
 import { ANSWER_REF_CODES, buildMatchPrompt, buildProfilePrompt } from "@/lib/ai/prompts";
 import { assertAnswerRefsAreDisclosed, avatarProfileOutputSchema, matchOutputSchema } from "@/lib/ai/schemas";
 import type {
@@ -195,21 +195,55 @@ type CreateGeminiClientOptions = {
 export function createGeminiClient({ apiKey, model = GEMINI_MODEL }: CreateGeminiClientOptions): GeminiClient {
   return {
     async generateJson({ prompt, schema }): Promise<string> {
-      const { GoogleGenAI } = await import("@google/genai");
+      const { ApiError, GoogleGenAI } = await import("@google/genai");
       const client = new GoogleGenAI({ apiKey });
-      const response = await client.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: schema as Schema,
-        },
-      });
+      let response;
+      try {
+        response = await client.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: schema as Schema,
+          },
+        });
+      } catch (error) {
+        if (error instanceof ApiError) {
+          throw new AiProviderError(
+            `HTTP_ERROR: Gemini APIがエラーを返しました(status=${error.status})。`,
+            { provider: "Gemini", kind: "http_error", httpStatus: error.status, ...extractGeminiErrorDetails(error) },
+          );
+        }
+        throw error;
+      }
       const text = response.text;
       if (!text) {
-        throw new Error("INVALID_OUTPUT: Geminiの応答が空でした。");
+        throw new AiProviderError(
+          "INVALID_OUTPUT: Geminiの応答が空でした。",
+          { provider: "Gemini", kind: "contract_violation" },
+        );
       }
       return text;
     },
   };
+}
+
+/**
+ * GeminiのApiError.messageは`JSON.stringify({ error: { message, code, status } })`という形
+ * (SDKのthrowErrorIfNotOKが組み立てる)。この中の`message`はAPI側が組み立てた文言で
+ * 利用者の回答本文を含む保証がないが、丸ごとログへ出すのは避け(禁止事項)、
+ * 種別を表す`status`(例: "RESOURCE_EXHAUSTED")とコードを表す`code`だけを取り出す。
+ * JSONとして解釈できない場合はどちらもundefinedのまま返す。
+ */
+function extractGeminiErrorDetails(error: { message: string }): { apiErrorType?: string; apiErrorCode?: string } {
+  try {
+    const parsed = JSON.parse(error.message) as { error?: { status?: unknown; code?: unknown } };
+    const apiErrorType = typeof parsed.error?.status === "string" ? parsed.error.status : undefined;
+    const apiErrorCode = typeof parsed.error?.code === "string" || typeof parsed.error?.code === "number"
+      ? String(parsed.error.code)
+      : undefined;
+    return { apiErrorType, apiErrorCode };
+  } catch {
+    return {};
+  }
 }

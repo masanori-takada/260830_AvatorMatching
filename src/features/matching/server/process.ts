@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 
 import { requireUser } from "@/features/identity/server/session";
 import { getOwnedMatchInput } from "@/features/matching/server/queries";
+import { extractAiDiagnostics } from "@/lib/ai/generation";
 import { getAiProvider } from "@/lib/ai/provider";
 import { matchOutputSchema } from "@/lib/ai/schemas";
 import { logError } from "@/lib/logger";
@@ -34,11 +35,15 @@ export async function processOwnedMatch(matchRunId: string): Promise<"completed"
       p_match_run_id: matchRunId,
       p_error_code: errorCode,
     });
+    // AiProviderError(openai-provider.ts/gemini-provider.ts/generation.ts)なら、
+    // provider種別・失敗種別・HTTPステータス・APIのエラー種別/コードを構造化して残す(FR-040)。
+    // 回答本文・生成された会話本文・APIキーは含まない。
     logError("match_processing_failed", {
       matchRunId,
       errorCode,
       errorName: error instanceof Error ? error.name : "UnknownError",
       failErrorCode: failError?.code,
+      ...extractAiDiagnostics(error, "unknown"),
     });
     if (isInvalidOutput) throw new Error("INVALID_OUTPUT", { cause: error });
     throw error;

@@ -10,6 +10,7 @@ import {
   type SensitiveGroup,
 } from "@/features/interview/domain";
 import { InterviewAnswerValidationError, parseInterviewAnswer } from "@/features/interview/schemas";
+import { AiProviderError } from "@/lib/ai/generation";
 import { getAiProvider } from "@/lib/ai/provider";
 import { avatarProfileOutputSchema } from "@/lib/ai/schemas";
 import { toActionError } from "@/lib/errors";
@@ -125,12 +126,15 @@ export async function completeInterview(): Promise<ActionResult<{
     }
     const actionError = toActionError(error);
     if (actionError.code === "INTERNAL_ERROR") {
-      // SupabaseのエラーはError型ではなくcodeを持つオブジェクトなので、原因追跡のため
-      // 回答本文を含まない識別子だけを残す。
+      // AiProviderError(openai-provider.ts/gemini-provider.ts/generation.ts)なら、
+      // provider種別・失敗種別・HTTPステータス・APIのエラー種別/コードを構造化して残す(FR-040)。
+      // それ以外(SupabaseのエラーはError型ではなくcodeを持つオブジェクト等)は
+      // 従来どおりname/codeだけを残す。どちらも回答本文・APIキーは含まない。
       const details = error as { name?: string; code?: string } | null;
       logError("avatar_profile_completion_failed", {
         errorName: details?.name,
         errorCode: details?.code,
+        ...(error instanceof AiProviderError ? error.diagnostics : {}),
       });
     }
     return failure(actionError.code, actionError.message, actionError.retryable);

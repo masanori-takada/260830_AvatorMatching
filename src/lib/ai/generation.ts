@@ -9,11 +9,61 @@ export type GenerationClient = {
   generateJson(request: { prompt: string; schema: unknown }): Promise<string>;
 };
 
+/**
+ * AIプロバイダの失敗種別。ログ側(service.ts/process.ts)がerrorのnameとcodeしか見ておらず、
+ * throw元(openai-provider.ts等)がメッセージ文字列に詰めた情報が失われていた問題(FR-040)への対応。
+ * - http_error: APIがHTTPエラーステータスを返した(status/apiErrorType/apiErrorCodeが埋まる)
+ * - timeout: 制限時間内に応答が返らなかった
+ * - contract_violation: 応答は返ったがJSON解析や契約検証(Zod/answerRefs等)に失敗した
+ * - other: 上記以外(ネットワーク断など)
+ */
+export type AiFailureKind = "http_error" | "timeout" | "contract_violation" | "other";
+
+/**
+ * ログへ残してよい診断情報だけの集合。回答本文・生成された会話本文・APIキー・
+ * エラーレスポンス本文そのものは含めない(FR-040の「やってはいけないこと」)。
+ */
+export type AiDiagnostics = {
+  provider: string;
+  kind: AiFailureKind;
+  httpStatus?: number;
+  apiErrorType?: string;
+  apiErrorCode?: string;
+};
+
+/**
+ * AIプロバイダ呼び出しの失敗を、ログ側でも失わずに扱えるよう構造化したエラー。
+ * messageは人間が読むための説明文(既存コードとの互換のためINVALID_OUTPUT/TIMEOUT等の
+ * プレフィックスを維持する)、diagnosticsは秘密情報を含まない構造化フィールド。
+ */
+export class AiProviderError extends Error {
+  readonly diagnostics: AiDiagnostics;
+
+  constructor(message: string, diagnostics: AiDiagnostics, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "AiProviderError";
+    this.diagnostics = diagnostics;
+  }
+}
+
+/**
+ * 任意のerrorから、ログに残してよい診断情報だけを取り出す。AiProviderErrorでなければ
+ * 種別不明("other")として扱う(privacy-provider.ts由来のエラー等、本文が混入し得るものを
+ * 誤って構造化フィールドとして残さないための安全側の既定)。
+ */
+export function extractAiDiagnostics(error: unknown, providerLabel: string): AiDiagnostics {
+  if (error instanceof AiProviderError) return error.diagnostics;
+  return { provider: providerLabel, kind: "other" };
+}
+
 function parseJson(raw: string, providerLabel: string): unknown {
   try {
     return JSON.parse(raw);
   } catch {
-    throw new Error(`INVALID_OUTPUT: ${providerLabel}の応答をJSONとして解釈できませんでした。`);
+    throw new AiProviderError(
+      `INVALID_OUTPUT: ${providerLabel}の応答をJSONとして解釈できませんでした。`,
+      { provider: providerLabel, kind: "contract_violation" },
+    );
   }
 }
 
@@ -30,7 +80,10 @@ async function callWithTimeout(
       client.generateJson({ prompt, schema }),
       new Promise<never>((_resolve, reject) => {
         timer = setTimeout(
-          () => reject(new Error(`TIMEOUT: ${providerLabel}の応答が制限時間を超えました。`)),
+          () => reject(new AiProviderError(
+            `TIMEOUT: ${providerLabel}の応答が制限時間を超えました。`,
+            { provider: providerLabel, kind: "timeout" },
+          )),
           timeoutMs,
         );
       }),
@@ -61,5 +114,9 @@ export async function generateValidated<T>(
       lastError = error;
     }
   }
-  throw new Error(`INVALID_OUTPUT: ${providerLabel}の出力が契約を満たしませんでした。`, { cause: lastError });
+  throw new AiProviderError(
+    `INVALID_OUTPUT: ${providerLabel}の出力が契約を満たしませんでした。`,
+    { provider: providerLabel, kind: "contract_violation" },
+    { cause: lastError },
+  );
 }

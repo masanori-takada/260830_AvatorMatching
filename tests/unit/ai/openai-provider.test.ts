@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { AiProviderError } from "@/lib/ai/generation";
 import { getAiProvider } from "@/lib/ai/provider";
 import type { MatchInput, ProfileInput } from "@/lib/ai/types";
-import { OpenAiAiProvider, type OpenAiClient } from "@/lib/ai/openai-provider";
+import { createOpenAiClient, OpenAiAiProvider, type OpenAiClient } from "@/lib/ai/openai-provider";
 
 // APIキーやネットワーク通信を一切使わず、OpenAiClientへ偽の実装を注入して検証する。
 // (gemini-provider.test.tsと同じ観点を、OpenAiAiProviderに対しても踏襲する)
@@ -187,6 +188,103 @@ describe("OpenAiAiProvider", () => {
     const prompt = vi.mocked(client.generateJson).mock.calls[0]![0].prompt;
     expect(prompt).toContain("料理に没頭すると時間を忘れます");
     expect(prompt).not.toMatch(/@|山田太郎|090-\d{4}-\d{4}/u);
+  });
+});
+
+describe("createOpenAiClient: HTTPエラー時の診断情報(FR-040)", () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("OpenAIがHTTPエラーを返したとき、ステータスコードとエラー種別・コードをAiProviderErrorとして取り出せる", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({
+        error: {
+          message: "利用者の回答本文を含むかもしれない生の説明文(ログへ出してはいけない)",
+          type: "insufficient_quota",
+          code: "rate_limit_exceeded",
+        },
+      }),
+      { status: 429, headers: { "Content-Type": "application/json" } },
+    ));
+    const client = createOpenAiClient({ apiKey: "sk-dummy-test-key-not-real", model: "test-model" });
+
+    let caught: unknown;
+    try {
+      await client.generateJson({ prompt: "テスト用プロンプト", schema: {} });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(AiProviderError);
+    const error = caught as AiProviderError;
+    expect(error.diagnostics).toEqual({
+      provider: "OpenAI",
+      kind: "http_error",
+      httpStatus: 429,
+      apiErrorType: "insufficient_quota",
+      apiErrorCode: "rate_limit_exceeded",
+    });
+  });
+
+  it("診断情報にはAPIキー・エラー本文のmessage・回答本文が一切含まれない", async () => {
+    const secretApiKey = "sk-super-secret-api-key-not-real";
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({
+        error: {
+          message: "散歩でゆっくり過ごしますという回答が含まれる生のエラー説明文",
+          type: "server_error",
+          code: null,
+        },
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    ));
+    const client = createOpenAiClient({ apiKey: secretApiKey, model: "test-model" });
+
+    let caught: unknown;
+    try {
+      await client.generateJson({ prompt: "散歩でゆっくり過ごします", schema: {} });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(AiProviderError);
+    const error = caught as AiProviderError;
+    const serialized = JSON.stringify(error.diagnostics);
+    expect(serialized).not.toContain(secretApiKey);
+    expect(serialized).not.toContain("散歩でゆっくり過ごします");
+    expect(serialized).not.toContain("生のエラー説明文");
+    // codeがnullなど期待形と異なる場合はundefinedのまま(丸ごと本文を拾わない)。
+    expect(error.diagnostics.apiErrorCode).toBeUndefined();
+    expect(error.diagnostics.apiErrorType).toBe("server_error");
+    expect(error.diagnostics.httpStatus).toBe(500);
+  });
+
+  it("JSONとして解釈できないエラー本文でも、ステータスコードだけは診断情報として残る", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(
+      "<html>Bad Gateway</html>",
+      { status: 502, headers: { "Content-Type": "text/html" } },
+    ));
+    const client = createOpenAiClient({ apiKey: "sk-dummy-test-key-not-real", model: "test-model" });
+
+    let caught: unknown;
+    try {
+      await client.generateJson({ prompt: "テスト", schema: {} });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(AiProviderError);
+    const error = caught as AiProviderError;
+    expect(error.diagnostics).toEqual({
+      provider: "OpenAI",
+      kind: "http_error",
+      httpStatus: 502,
+      apiErrorType: undefined,
+      apiErrorCode: undefined,
+    });
   });
 });
 
