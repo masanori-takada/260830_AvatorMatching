@@ -55,6 +55,21 @@ describe("saveInterviewAnswer", () => {
     })).resolves.toMatchObject({ ok: true, data: { nextPath: "/interview/3" } });
   });
 
+  it("最終回答の保存後は要約画面を挟まずマッチングへ進む", async () => {
+    createServerSupabaseClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({
+        data: [{ revision: 42, answered_count: 42, next_question_order: null }],
+        error: null,
+      }),
+    });
+
+    await expect(saveInterviewAnswer({
+      questionCode: "q42",
+      answer: "女性",
+      expectedRevision: 41,
+    })).resolves.toMatchObject({ ok: true, data: { nextPath: "/matching" } });
+  });
+
   it("古いrevisionによる更新をSTATE_CONFLICTとして返す", async () => {
     createServerSupabaseClient.mockResolvedValue({
       rpc: vi.fn().mockResolvedValue({

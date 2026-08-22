@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/features/identity/server/session";
+import { identifyDbErrorCode } from "@/lib/db-error-codes";
 import { toActionError } from "@/lib/errors";
 import { logError } from "@/lib/logger";
 import { failure, success, type ActionResult } from "@/lib/result";
@@ -29,8 +30,12 @@ export async function resetDemoData(): Promise<ActionResult<{ nextPath: "/start"
   } catch (error) {
     const actionError = toActionError(error);
     // 回答本文や秘密情報は含めず、原因追跡に必要な識別子だけを記録する(FR-040)。
-    const details = error as { name?: string; code?: string } | null;
-    logError("reset_failed", { errorName: details?.name, errorCode: details?.code });
+    const details = error as { name?: string; code?: string; message?: string } | null;
+    logError("reset_failed", {
+      errorName: details?.name,
+      errorCode: details?.code,
+      dbErrorId: identifyDbErrorCode(details?.message),
+    });
     return failure(actionError.code, actionError.message, actionError.retryable);
   }
 }

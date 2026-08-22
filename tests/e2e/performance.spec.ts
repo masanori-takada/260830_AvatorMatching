@@ -76,10 +76,7 @@ test.describe("performance (2s budget, SC-010 fidelity gate companion)", () => {
 
     await page.goto("/interview/4");
     await answerInterviewRange(page, 4, TOTAL_INTERVIEW_QUESTIONS);
-    await expect(page).toHaveURL(/\/interview\/complete$/);
-
-    await expectWithinBudget(page, "/interview/complete", "/interview/complete", () =>
-      expect(page.getByRole("button", { name: "アバター要約を作成する" })).toBeVisible());
+    await expect(page).toHaveURL(/\/matching$/);
 
     await createAvatarSummary(page);
     await page.goto("/matching");
@@ -87,11 +84,12 @@ test.describe("performance (2s budget, SC-010 fidelity gate companion)", () => {
     // (matching-progress.tsx)。個別の相性レポートへは、まず/matchesの候補一覧を経由する。
     await expect(page.getByRole("link", { name: /マッチ結果を見る/u })).toBeVisible({ timeout: 30_000 });
 
-    await expectWithinBudget(page, "/matching(完了)", "/matching", () =>
-      expect(page.getByRole("link", { name: /マッチ結果を見る/u })).toBeVisible({ timeout: 30_000 }));
-
     await page.getByRole("link", { name: /マッチ結果を見る/u }).click();
     await expect(page).toHaveURL(/\/matches$/);
+
+    await expectWithinBudget(page, "/matches", "/matches", () =>
+      expect(page.getByRole("heading", { name: "マッチ結果" })).toBeVisible());
+
     await page.getByRole("link", { name: /相性 \d+%/u }).first().click();
     await expect(page.getByRole("meter")).toHaveCount(5);
     const reportUrl = page.url();

@@ -46,6 +46,7 @@ export function redactPotentialPii(value: string): string {
 
 const traitSchema = z.string().min(1).max(200);
 
+/** 旧要約生成APIの互換契約。現行の画面・マッチング経路からは使用しない。 */
 export const avatarProfileOutputSchema = z.strictObject({
   summary: z.string().min(1).max(600),
   traits: z.strictObject({

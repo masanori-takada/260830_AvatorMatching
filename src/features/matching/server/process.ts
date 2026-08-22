@@ -5,6 +5,7 @@ import { getOwnedMatchInput } from "@/features/matching/server/queries";
 import { extractAiDiagnostics } from "@/lib/ai/generation";
 import { getAiProvider } from "@/lib/ai/provider";
 import { matchOutputSchema } from "@/lib/ai/schemas";
+import { identifyDbErrorCode } from "@/lib/db-error-codes";
 import { logError } from "@/lib/logger";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -14,7 +15,11 @@ export async function processOwnedMatch(matchRunId: string): Promise<"completed"
   const { data: claimedStatus, error: claimError } = await client.rpc("claim_match_run", {
     p_match_run_id: matchRunId,
   });
-  if (claimError) throw claimError;
+  if (claimError) {
+    // claim_match_run()の識別子(MATCH_NOT_FOUND/STATE_CONFLICT/RETRY_LIMIT等)だけを残す(FR-040)。
+    logError("match_claim_failed", { matchRunId, dbErrorId: identifyDbErrorCode(claimError.message) });
+    throw claimError;
+  }
   if (claimedStatus === "completed") return "completed";
   if (claimedStatus !== "processing") throw new Error("STATE_CONFLICT");
 
@@ -28,8 +33,8 @@ export async function processOwnedMatch(matchRunId: string): Promise<"completed"
     if (completeError) throw completeError;
     return "completed";
   } catch (error) {
-    const isInvalidOutput = error instanceof ZodError
-      || (error instanceof Error && error.message.includes("INVALID_OUTPUT"));
+    const dbErrorId = error instanceof Error ? identifyDbErrorCode(error.message) : undefined;
+    const isInvalidOutput = error instanceof ZodError || dbErrorId === "INVALID_OUTPUT";
     const errorCode = isInvalidOutput ? "INVALID_OUTPUT" : "PROVIDER_ERROR";
     const { error: failError } = await client.rpc("fail_match_run", {
       p_match_run_id: matchRunId,
@@ -37,11 +42,13 @@ export async function processOwnedMatch(matchRunId: string): Promise<"completed"
     });
     // AiProviderError(openai-provider.ts/gemini-provider.ts/generation.ts)なら、
     // provider種別・失敗種別・HTTPステータス・APIのエラー種別/コードを構造化して残す(FR-040)。
-    // 回答本文・生成された会話本文・APIキーは含まない。
+    // 回答本文・生成された会話本文・APIキーは含まない。dbErrorIdはcomplete_match_run()が
+    // 投げた識別子(STATE_CONFLICT/RETRY_LIMIT/INVALID_OUTPUT等)と完全一致した場合だけの値。
     logError("match_processing_failed", {
       matchRunId,
       errorCode,
       errorName: error instanceof Error ? error.name : "UnknownError",
+      dbErrorId,
       failErrorCode: failError?.code,
       ...extractAiDiagnostics(error, "unknown"),
     });

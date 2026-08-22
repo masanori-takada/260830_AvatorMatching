@@ -152,10 +152,10 @@ export async function answerFreeTextQuestionByKeyboard(page: Page, order: number
 }
 
 /**
- * インタビューを開始し、1問目から最終問(全問)まで回答して完了画面へ到達する。
+ * インタビューを開始し、全問回答して自動的にマッチング画面へ到達する。
  */
 export async function completeInterview(page: Page): Promise<void> {
   await startInterview(page);
   await answerInterviewRange(page, 1, TOTAL_INTERVIEW_QUESTIONS);
-  await expect(page).toHaveURL(/\/interview\/complete$/);
+  await expect(page).toHaveURL(/\/matching$/);
 }

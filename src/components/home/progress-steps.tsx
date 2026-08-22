@@ -13,6 +13,8 @@ const STEP_LABELS = [
 function currentStepIndex(state: JourneyStateName): number {
   switch (state) {
     case "interview":
+    // 回答は完了したがアバター要約が未作成/古い間は、まだ「インタビュー回答」段階の
+    // 続き(要約作成)として扱う(不具合1対応)。
       return 0;
     case "ready_to_match":
     case "matching":

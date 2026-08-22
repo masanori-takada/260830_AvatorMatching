@@ -25,7 +25,7 @@ test("回答途中はホームで進捗と「インタビューを続ける」�
 test("会話処理中はホームが処理中の状態を示し、レポート導線を主操作にしない(US5-2)", async ({ page }) => {
   await startInterview(page);
   await answerInterviewRange(page, 1, TOTAL_INTERVIEW_QUESTIONS);
-  await expect(page).toHaveURL(/\/interview\/complete$/);
+  await expect(page).toHaveURL(/\/matching$/);
   await createAvatarSummary(page);
 
   // マッチ処理を開始する。モック処理は高速に完了しうるため、この時点のホーム表示は
@@ -37,6 +37,13 @@ test("会話処理中はホームが処理中の状態を示し、レポート�
   const reportLink = page.getByRole("link", { name: "マッチ結果を見る" });
   const progressLink = page.getByRole("link", { name: "進行状況を見る" });
   await expect(reportLink.or(progressLink)).toBeVisible();
+});
+
+test("全回答後は要約ボタンを挟まず自動的にマッチングを開始する", async ({ page }) => {
+  await startInterview(page);
+  await answerInterviewRange(page, 1, TOTAL_INTERVIEW_QUESTIONS);
+  await expect(page).toHaveURL(/\/matching$/);
+  await expect(page.getByRole("button", { name: "アバター要約を作成する" })).toHaveCount(0);
 });
 
 test("レポート完成後はホームで完了通知と「マッチ結果を見る」が主操作になる(US5-3)", async ({ page }) => {

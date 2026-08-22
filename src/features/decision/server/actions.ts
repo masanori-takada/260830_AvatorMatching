@@ -1,7 +1,9 @@
 "use server";
 
 import { requireUser } from "@/features/identity/server/session";
+import { identifyDbErrorCode } from "@/lib/db-error-codes";
 import { toActionError } from "@/lib/errors";
+import { logError } from "@/lib/logger";
 import { failure, success, type ActionError } from "@/lib/result";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -37,13 +39,15 @@ export async function commitDecision(input: DecisionInput): Promise<CommitDecisi
         },
       };
     }
-    if (error?.message.includes("ACCEPT_ALREADY_DECIDED")) {
+    // commit_decision()が投げる識別子と完全一致した場合だけ分岐する(FR-040)。
+    const dbErrorId = identifyDbErrorCode(error?.message);
+    if (dbErrorId === "ACCEPT_ALREADY_DECIDED") {
       return failure("STATE_CONFLICT", "すでに他の候補を承諾しています。承諾できるのはお一人だけです。", false);
     }
-    if (error?.message.includes("MATCH_NOT_FOUND")) {
+    if (dbErrorId === "MATCH_NOT_FOUND") {
       return failure("NOT_FOUND", "対象のマッチが見つかりません。", false);
     }
-    if (error?.message.includes("STATE_CONFLICT")) {
+    if (dbErrorId === "STATE_CONFLICT") {
       return failure("STATE_CONFLICT", "会話の完了後に決定できます。", false);
     }
     if (error) throw error;
@@ -52,6 +56,16 @@ export async function commitDecision(input: DecisionInput): Promise<CommitDecisi
     return success({ kind: row.kind, nextPath: row.kind === "accept" ? "/reveal" : "/declined" });
   } catch (error) {
     const actionError = toActionError(error);
+    if (actionError.code === "INTERNAL_ERROR") {
+      // 原因不明のまま調査が止まるのを避けるため、識別子だけ残す(FR-040)。DBのメッセージ
+      // 全文は残さない。
+      const details = error as { name?: string; code?: string; message?: string } | null;
+      logError("decision_commit_failed", {
+        errorName: details?.name,
+        errorCode: details?.code,
+        dbErrorId: identifyDbErrorCode(details?.message),
+      });
+    }
     return failure(actionError.code, actionError.message, actionError.retryable);
   }
 }

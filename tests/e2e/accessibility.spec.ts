@@ -89,8 +89,7 @@ test.describe("accessibility axe (SC-011)", () => {
 
     await page.goto("/interview/4");
     await answerInterviewRange(page, 4, TOTAL_INTERVIEW_QUESTIONS);
-    await expect(page).toHaveURL(/\/interview\/complete$/);
-    await expectNoSeriousViolations(page, "/interview/complete");
+    await expect(page).toHaveURL(/\/matching$/);
 
     await createAvatarSummary(page);
 

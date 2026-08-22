@@ -1,5 +1,5 @@
 import { INTERVIEW_QUESTION_CODES } from "@/features/interview/domain";
-import type { MatchInput, ProfileInput } from "@/lib/ai/types";
+import type { AiAnswer, MatchInput, ProfileInput } from "@/lib/ai/types";
 
 /**
  * プロンプト構築ロジック。GeminiAiProviderとOpenAiProviderの両方から参照される共通部分。
@@ -19,7 +19,7 @@ export const SHARED_RULES = [
 ].join("\n");
 
 /** 回答を質問コード付きの一覧にする。本文はPrivacySafeAiProvider側で秘匿済みの想定。 */
-export function formatAnswers(answers: ProfileInput["answers"]): string {
+export function formatAnswers(answers: readonly AiAnswer[]): string {
   return answers
     .slice()
     .sort((left, right) => left.questionCode.localeCompare(right.questionCode))
@@ -27,18 +27,17 @@ export function formatAnswers(answers: ProfileInput["answers"]): string {
     .join("\n");
 }
 
+/** 旧要約生成APIの互換プロンプト。利用者向け経路からは呼び出さない。 */
 export function buildProfilePrompt(input: ProfileInput): string {
   return [
-    "あなたは、ある人物の回答から「その人の代わりに会話するAIアバター」の人物像を要約します。",
+    "回答からAIアバターの人物像を要約してください。",
     "",
     "## 回答",
     formatAnswers(input.answers),
     "",
     "## 出力の要件",
-    "- summary: その人の人柄が伝わる自然な日本語の要約。250文字以内。",
-    "- traits: 以下6つの観点をそれぞれ100文字以内で書く。",
-    "  leisure(休日の過ごし方) / communication(人との関わり方) / lifestyle(生活のリズム)",
-    "  / values(大切にしている価値観) / relationships(関係の築き方) / priorities(優先していること)",
+    "- summary: 人柄が伝わる250文字以内の日本語。",
+    "- traits: leisure / communication / lifestyle / values / relationships / priorities の6項目。",
     "- 回答に書かれた内容だけを根拠にすること。",
     "",
     "## 禁止事項",
@@ -53,9 +52,6 @@ export function buildMatchPrompt(input: MatchInput): string {
     "",
     "## あなたが代弁する人物(user_avatar)の回答",
     formatAnswers(input.answers),
-    "",
-    "## その人物の要約",
-    input.profile.summary,
     "",
     `## 相手(candidate_avatar)の情報 呼称: ${input.candidate.avatarAlias}`,
     JSON.stringify(input.candidate.conversationProfile),

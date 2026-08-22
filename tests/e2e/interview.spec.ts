@@ -10,7 +10,7 @@ import {
   TOTAL_INTERVIEW_QUESTIONS,
 } from "./support/interview";
 
-test("匿名利用者が全問を1画面ずつ回答して完了画面へ到達する", async ({ page }) => {
+test("匿名利用者が全問を1画面ずつ回答して自動的にマッチングへ進む", async ({ page }) => {
   await page.goto("/start");
   await page.getByRole("button", { name: "インタビューをはじめる" }).click();
 
@@ -42,11 +42,12 @@ test("匿名利用者が全問を1画面ずつ回答して完了画面へ到達�
     }
   }
 
-  await expect(page).toHaveURL(/\/interview\/complete$/);
-  await expect(page.getByText(`${TOTAL_INTERVIEW_QUESTIONS} / ${TOTAL_INTERVIEW_QUESTIONS}`)).toBeVisible();
-  await page.reload();
-  await expect(page.getByText(`${TOTAL_INTERVIEW_QUESTIONS} / ${TOTAL_INTERVIEW_QUESTIONS}`)).toBeVisible();
-  await expect(page.getByText("回答が完了しました")).toBeVisible();
+  await expect(page).toHaveURL(/\/matching$/);
+  await expect(
+    page
+      .getByRole("heading", { name: "アバターが会話中です" })
+      .or(page.getByRole("link", { name: /マッチ結果を見る/u })),
+  ).toBeVisible({ timeout: 30_000 });
 });
 
 test("開始失敗時に再試行案内を表示する", async ({ page }) => {

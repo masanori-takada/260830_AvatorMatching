@@ -47,17 +47,6 @@ describe("startMatch", () => {
       data: { matches: [{ matchRunId: "11111111-1111-4111-8111-111111111111", status: "queued" }] },
     });
   });
-  it("回答revisionとプロフィールがずれた場合は再生成を案内する", async () => {
-    createServerSupabaseClient.mockResolvedValue({
-      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: "STALE_PROFILE" } }),
-    });
-
-    await expect(startMatch()).resolves.toMatchObject({
-      ok: false,
-      error: { code: "STATE_CONFLICT", retryable: false },
-    });
-  });
-
   it("既存completed runも冪等な再開結果として返す", async () => {
     createServerSupabaseClient.mockResolvedValue({
       rpc: vi.fn().mockResolvedValue({

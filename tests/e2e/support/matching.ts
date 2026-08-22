@@ -4,7 +4,7 @@ import { createAvatarSummary } from "./avatar-summary";
 import { completeInterview } from "./interview";
 
 /**
- * インタビュー完了・アバター要約作成のあと、`/matching`で複数候補(最大3人)との
+ * インタビュー完了後、自動遷移した`/matching`で複数候補(最大3人)との
  * 会話が終わるまで待ち、`/matches`(マッチ結果一覧)へ到達する。
  *
  * 「n人」の人数はモックプロバイダの応答次第で変わりうるため固定しない

@@ -98,10 +98,9 @@ test("会話・レポートが揃い1人を承諾した状態でもリセット�
   await expect(mypageAnswerLocator(page, FIRST_CHOICE_QUESTION_ORDER).getByText(FIRST_CHOICE_OPTION_1)).toHaveCount(0);
   await expect(page.getByText("未回答").first()).toBeVisible();
 
-  // 以前のマッチ結果が残っていない(マッチ結果が無ければ/matchesは/matchingへ
-  // リダイレクトする。src/app/(journey)/matches/page.tsxの`summaries.length === 0`の分岐)
+  // 以前のマッチ結果が残っていない。リセット後は未回答なので最初の質問へ戻る。
   await page.goto("/matches");
-  await expect(page).toHaveURL(/\/matching$/);
+  await expect(page).toHaveURL(/\/interview\/1$/);
 
   // 以前のお知らせが残っていない
   await page.goto("/notifications");

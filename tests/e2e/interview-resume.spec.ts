@@ -19,7 +19,7 @@ async function answerThroughOrder(page: Page, upToOrder: number) {
 
 async function completeAllQuestions(page: Page) {
   await answerThroughOrder(page, TOTAL_INTERVIEW_QUESTIONS);
-  await expect(page).toHaveURL(/\/interview\/complete$/);
+  await expect(page).toHaveURL(/\/matching$/);
   await createAvatarSummary(page);
 }
 

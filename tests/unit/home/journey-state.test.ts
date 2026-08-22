@@ -10,10 +10,14 @@ describe("deriveJourneyState", () => {
     expect(result.primaryAction.href).toBe("/interview/8");
   });
 
-  it("全問完了しマッチ未開始なら開始への導線を主操作にする", () => {
-    const result = deriveJourneyState({ answeredCount: TOTAL_QUESTIONS, matches: [] });
+  it("全問完了・マッチ未開始なら要約を挟まずマッチングを許可する", () => {
+    const result = deriveJourneyState({
+      answeredCount: TOTAL_QUESTIONS,
+      matches: [],
+    });
     expect(result.state).toBe("ready_to_match");
     expect(result.primaryAction.href).toBe("/matching");
+    expect(result.allowedPaths).toContain("/matching");
   });
 
   it("1件でも処理中ならmatching状態としレポート導線を主操作にしない", () => {

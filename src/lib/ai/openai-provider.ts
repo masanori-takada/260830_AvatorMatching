@@ -1,13 +1,7 @@
 import { AiProviderError, generateValidated } from "@/lib/ai/generation";
 import { ANSWER_REF_CODES, buildMatchPrompt, buildProfilePrompt } from "@/lib/ai/prompts";
 import { assertAnswerRefsAreDisclosed, avatarProfileOutputSchema, matchOutputSchema } from "@/lib/ai/schemas";
-import type {
-  AiProvider,
-  AvatarProfileOutput,
-  MatchInput,
-  MatchOutput,
-  ProfileInput,
-} from "@/lib/ai/types";
+import type { AiProvider, AvatarProfileOutput, MatchInput, MatchOutput, ProfileInput } from "@/lib/ai/types";
 
 /**
  * 生成1回あたりの上限。GeminiAiProvider(gemini-provider.ts)の実測(24〜36発言化後、

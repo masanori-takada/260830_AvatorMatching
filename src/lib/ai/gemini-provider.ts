@@ -1,13 +1,7 @@
 import { AiProviderError, generateValidated } from "@/lib/ai/generation";
 import { ANSWER_REF_CODES, buildMatchPrompt, buildProfilePrompt } from "@/lib/ai/prompts";
 import { assertAnswerRefsAreDisclosed, avatarProfileOutputSchema, matchOutputSchema } from "@/lib/ai/schemas";
-import type {
-  AiProvider,
-  AvatarProfileOutput,
-  MatchInput,
-  MatchOutput,
-  ProfileInput,
-} from "@/lib/ai/types";
+import type { AiProvider, AvatarProfileOutput, MatchInput, MatchOutput, ProfileInput } from "@/lib/ai/types";
 // 型だけの参照。import typeはビルド時に消えるため、AI_PROVIDER=mockの経路でも実行時にSDKを読み込まない。
 import type { Schema } from "@google/genai";
 

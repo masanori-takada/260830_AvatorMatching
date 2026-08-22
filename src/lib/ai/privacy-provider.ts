@@ -1,13 +1,6 @@
 import { INTERVIEW_QUESTIONS } from "@/features/interview/domain";
 import { avatarProfileOutputSchema, matchOutputSchema, redactPotentialPii } from "@/lib/ai/schemas";
-import type {
-  AiAnswer,
-  AiProvider,
-  AvatarProfileOutput,
-  MatchInput,
-  MatchOutput,
-  ProfileInput,
-} from "@/lib/ai/types";
+import type { AiAnswer, AiProvider, AvatarProfileOutput, MatchInput, MatchOutput, ProfileInput } from "@/lib/ai/types";
 
 const freeTextCodes = new Set(
   INTERVIEW_QUESTIONS.filter(({ kind }) => kind === "free_text").map(({ code }) => code),

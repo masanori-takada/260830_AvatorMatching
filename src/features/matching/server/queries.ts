@@ -11,7 +11,6 @@ import type { createServerSupabaseClient } from "@/lib/supabase/server";
 type ServerClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
 
 type AnswerRow = { question_code: `q${string}`; answer: string; revision: number };
-type ProfileRow = { summary: string; traits: Record<string, string> };
 type CandidateRow = {
   avatar_alias: string;
   conversation_profile: Record<string, unknown>;
@@ -43,10 +42,6 @@ export async function getOwnedMatchInput(
     .select("question_code, answer, revision").eq("owner_id", ownerId).order("question_code");
   if (answersError || !answers || answers.length !== TOTAL_QUESTIONS) throw answersError ?? new Error("INTERVIEW_INCOMPLETE");
 
-  const { data: profile, error: profileError } = await client.from("avatar_profiles")
-    .select("summary, traits").eq("owner_id", ownerId).single();
-  if (profileError || !profile) throw profileError ?? new Error("PROFILE_NOT_FOUND");
-
   const { data: candidate, error: candidateError } = await client.from("demo_candidates")
     .select("avatar_alias, conversation_profile, disclosure_consent_groups")
     .eq("id", run.candidate_id).eq("active", true).single();
@@ -70,10 +65,6 @@ export async function getOwnedMatchInput(
 
   return {
     answers: disclosableAnswers,
-    profile: {
-      summary: (profile as ProfileRow).summary,
-      traits: (profile as ProfileRow).traits,
-    },
     candidate: {
       avatarAlias: typedCandidate.avatar_alias,
       conversationProfile: typedCandidate.conversation_profile,

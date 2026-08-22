@@ -53,7 +53,7 @@ export function deriveJourneyState(snapshot: JourneySnapshot): DerivedJourney {
       return {
         state: "ready_to_match",
         primaryAction: { label: "アバターにまかせる", href: "/matching" },
-        allowedPaths: [...COMMON_PATHS, "/matching", "/interview/complete"],
+        allowedPaths: [...COMMON_PATHS, "/matching"],
       };
     }
 
@@ -135,7 +135,6 @@ export function describeJourneyState(state: JourneyStateName): string {
 
 type MatchRunRow = { id: string; status: MatchRunStatus };
 type DecisionRow = { match_run_id: string; kind: "accept" | "decline" };
-
 // requireUser済みのownerIdから、ホーム表示に必要な現在状態(最大3件のmatch_runsと
 // それぞれの決定)をDBから取得する。RLSで自分の行しか見えない前提のうえ、
 // 明示的にowner_idも指定して二重に絞り込む。
@@ -159,7 +158,6 @@ export async function getJourneySnapshot(userId: string): Promise<JourneySnapsho
   if (matchResult.error) {
     throw matchResult.error;
   }
-
   const answeredCount = answersResult.count ?? 0;
   const runs = (matchResult.data ?? []) as MatchRunRow[];
 
