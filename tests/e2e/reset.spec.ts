@@ -7,6 +7,7 @@ import {
   mypageAnswerLocator,
   startInterview,
 } from "./support/interview";
+import { reachFirstUndecidedReport } from "./support/matching";
 
 // 選択式の質問に1問も回答していない状態は想定しづらいため、最初の選択式質問を含む
 // 範囲まで回答する(元のテスト意図「複数問回答した状態」を保つため最低5問は回答する)。
@@ -65,4 +66,45 @@ test("確認ダイアログはキャンセルでき、その場合は削除さ�
 
   await page.goto("/mypage");
   await expect(mypageAnswerLocator(page, FIRST_CHOICE_QUESTION_ORDER).getByText(FIRST_CHOICE_OPTION_1)).toBeVisible();
+});
+
+test("会話・レポートが揃い1人を承諾した状態でもリセットでき、マッチ結果やお知らせも残らない", async ({ page }) => {
+  // インタビューを最後まで回答し、アバター要約を作り、3人分の会話とレポートが揃った
+  // 状態(=本番の不具合が起きた状態)を作ってからリセットする。
+  // reachFirstUndecidedReportは内部でcompleteInterview→createAvatarSummary→
+  // 全候補との会話完了→マッチ結果一覧→未決定の1件のレポート、まで進める
+  // (tests/e2e/support/matching.ts)。
+  await reachFirstUndecidedReport(page);
+
+  // decisionsに行がある状態(1人を承諾)でもリセットできることを確認する
+  // (このリセット経路も従来は未検証だった)。
+  await page.getByRole("button", { name: "承諾する" }).click();
+  await page.getByRole("button", { name: "承諾を確定する" }).click();
+  await expect(page).toHaveURL(/\/reveal$/);
+
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "デモをリセット" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "デモをリセット" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("この操作は取り消せません")).toBeVisible();
+
+  await dialog.getByRole("button", { name: "リセットする" }).click();
+  await expect(page).toHaveURL(/\/start$/);
+  await expect(page.getByRole("button", { name: "インタビューをはじめる" })).toBeVisible();
+
+  // 以前の回答が残っていない
+  await page.goto("/mypage");
+  await expect(mypageAnswerLocator(page, FIRST_CHOICE_QUESTION_ORDER).getByText(FIRST_CHOICE_OPTION_1)).toHaveCount(0);
+  await expect(page.getByText("未回答").first()).toBeVisible();
+
+  // 以前のマッチ結果が残っていない(マッチ結果が無ければ/matchesは/matchingへ
+  // リダイレクトする。src/app/(journey)/matches/page.tsxの`summaries.length === 0`の分岐)
+  await page.goto("/matches");
+  await expect(page).toHaveURL(/\/matching$/);
+
+  // 以前のお知らせが残っていない
+  await page.goto("/notifications");
+  await expect(page.getByRole("heading", { name: "お知らせ" })).toBeVisible();
+  await expect(page.getByText("まだお知らせはありません。")).toBeVisible();
 });
