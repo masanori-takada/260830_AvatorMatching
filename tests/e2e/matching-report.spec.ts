@@ -22,6 +22,14 @@ test("20回答から匿名会話・通知・5軸レポートまで確認でき�
 
   await page.goto("/notifications");
   await expect(page.getByRole("heading", { name: "お知らせ" })).toBeVisible();
-  await page.getByRole("button").first().click();
+  const noticeButton = page.getByRole("button").first();
+  // clickの完了(=アクション実行)を待たずに、押した直後の見た目を検証する。
+  // 既読化→再検証→リダイレクトはサーバーへの往復を伴い体感できるラグがあるため、
+  // その間ボタンがaria-busy/disabledに切り替わることで「反応がない」という誤解と
+  // 連打による二重送信を防いでいることを確認する(FR-038)。
+  const clickPromise = noticeButton.click();
+  await expect(noticeButton).toHaveAttribute("aria-busy", "true");
+  await expect(noticeButton).toBeDisabled();
+  await clickPromise;
   await expect(page.getByRole("meter")).toHaveCount(5);
 });

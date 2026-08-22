@@ -1,0 +1,43 @@
+/*
+ * お知らせカードの送信中インジケータ用スタイル。
+ * 右端の`›`と同じ枠(固定サイズ)にスピナーを収め、送信中に切り替わっても
+ * カード全体のレイアウト(高さ・幅)が変化しないようにする。
+ */
+.indicator {
+  align-items: center;
+  color: var(--color-subtext);
+  display: flex;
+  flex: 0 0 16px;
+  height: 16px;
+  justify-content: center;
+  width: 16px;
+}
+
+.spinner {
+  animation: notification-card-spin 0.8s linear infinite;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  border-top-color: var(--color-wine);
+  display: block;
+  height: 14px;
+  width: 14px;
+}
+
+@keyframes notification-card-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 視覚的には隠すが、スクリーンリーダーには読み上げさせる(送信中である旨の告知) */
+.srOnly {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
