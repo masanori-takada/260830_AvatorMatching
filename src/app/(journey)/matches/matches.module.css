@@ -11,3 +11,48 @@
 .badge { background: var(--color-pink-soft); border-radius: var(--radius-pill); color: var(--color-wine); font-size: 11px; font-weight: 700; padding: var(--space-2) var(--space-8); white-space: nowrap; }
 .summary { margin: var(--space-6) 0 0; }
 .note { color: var(--color-subtext); font-size: 12px; margin: var(--space-4) 0 0; }
+
+/* 相性の軸ごとの比較表(不具合3対応)。候補が3人並ぶと画面幅を超えうるため横スクロールにする。 */
+.compareWrap { margin: 0 0 var(--space-16); overflow-x: auto; }
+.compareTable { border-collapse: collapse; min-width: 100%; width: max-content; }
+.compareAxisHead {
+  background: var(--color-card);
+  color: var(--color-subtext);
+  font-size: 12px;
+  font-weight: 600;
+  padding: var(--space-8) var(--space-10);
+  position: sticky;
+  left: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+.compareCandidateHead {
+  color: var(--color-wine);
+  font-size: 13px;
+  font-weight: 700;
+  padding: var(--space-8) var(--space-10);
+  text-align: center;
+  white-space: nowrap;
+}
+.compareScore {
+  border-top: 1px solid var(--color-border);
+  font-size: 14px;
+  font-weight: 700;
+  padding: var(--space-8) var(--space-10);
+  text-align: center;
+}
+
+/* 「不一致の重大度」は他の軸と逆に数値が低いほど良いため、誤読を防ぐ注記
+   (report.module.cssの.hintと同じ見た目に揃える。不具合3対応)。 */
+.axisHint {
+  background: var(--color-pink-soft);
+  border-radius: var(--radius-pill);
+  color: var(--color-wine);
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-8);
+  white-space: nowrap;
+  width: fit-content;
+}

@@ -5,8 +5,8 @@ select plan(13);
 select tests.create_supabase_user('interview_user_a');
 select tests.create_supabase_user('interview_user_b');
 
-select is((select count(*) from public.interview_questions), 41::bigint, '固定質問は41問(既存20問+基本プロフィール17問+開示意思4問)');
-select is((select count(*) from public.interview_questions where kind = 'choice'), 36::bigint, '選択式は36問');
+select is((select count(*) from public.interview_questions), 42::bigint, '固定質問は42問(既存20問+基本プロフィール17問+開示意思4問+相手の性別希望1問)');
+select is((select count(*) from public.interview_questions where kind = 'choice'), 37::bigint, '選択式は37問');
 select is((select count(*) from public.interview_questions where kind = 'free_text'), 5::bigint, '自由記述は5問');
 select ok(
   not public.interview_has_visible_text(E'\t\n' || chr(160) || chr(12288)),

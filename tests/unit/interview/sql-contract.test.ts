@@ -11,7 +11,10 @@ import { INTERVIEW_QUESTIONS } from "@/features/interview/domain";
 // 202608220001_interview_profile_questions.sql のUPDATE文で+21され22〜41になる。
 // 新規質問(q21〜q41)は202608220001側にdisplay_order 1〜21として直接定義される
 // (基本プロフィール17問=1〜17、開示意思4問=18〜21)。
-// このテストは両ファイルを読み、実際に適用される最終状態を組み立ててdomain.tsと比較する。
+// さらに202608220004_gender_matching.sqlのUPDATE文で、q21(display_order=1)を除く
+// 全行のdisplay_orderが+1され、q42がdisplay_order=2として挿入される
+// (相手に紹介してほしい性別の質問。q21の直後)。
+// このテストは3ファイルを読み、実際に適用される最終状態を組み立ててdomain.tsと比較する。
 
 type QuestionRow = [code: string, displayOrder: number, category: string, kind: string, prompt: string, choices: unknown];
 
@@ -31,14 +34,18 @@ function parseInsertRows(sql: string): QuestionRow[] {
   ]);
 }
 
-describe("固定41問のSQL同期契約", () => {
-  it("TypeScriptとmigrationが仕様の全41問(既存20問+基本プロフィール17問+開示意思4問)と一致する", () => {
+describe("固定42問のSQL同期契約", () => {
+  it("TypeScriptとmigrationが仕様の全42問(既存20問+基本プロフィール17問+開示意思4問+相手の性別希望1問)と一致する", () => {
     const baseSql = readFileSync(
       resolve(process.cwd(), "supabase/migrations/202608130002_interview.sql"),
       "utf8",
     );
     const profileSql = readFileSync(
       resolve(process.cwd(), "supabase/migrations/202608220001_interview_profile_questions.sql"),
+      "utf8",
+    );
+    const genderSql = readFileSync(
+      resolve(process.cwd(), "supabase/migrations/202608220004_gender_matching.sql"),
       "utf8",
     );
 
@@ -54,7 +61,22 @@ describe("固定41問のSQL同期契約", () => {
     );
     const newRows = parseInsertRows(profileSql);
 
-    const sqlQuestions = [...newRows, ...existingRows]
+    // 202608220004側: display_order>=2の行はすべて+1され、q42がdisplay_order=2として挿入される。
+    const genderOffsetMatch = /display_order\s*=\s*display_order\s*\+\s*(\d+)\s*\nwhere display_order >= (\d+)/.exec(genderSql);
+    expect(genderOffsetMatch, "q42挿入前にdisplay_orderをずらすUPDATE文が見つかりません").not.toBeNull();
+    const genderOffset = Number(genderOffsetMatch![1]);
+    const genderOffsetThreshold = Number(genderOffsetMatch![2]);
+    const genderNewRows = parseInsertRows(genderSql);
+    expect(genderNewRows, "q42のINSERT文が見つかりません").toHaveLength(1);
+
+    const shiftedRows = [...newRows, ...existingRows].map(
+      ([code, displayOrder, category, kind, prompt, choices]): QuestionRow =>
+        displayOrder >= genderOffsetThreshold
+          ? [code, displayOrder + genderOffset, category, kind, prompt, choices]
+          : [code, displayOrder, category, kind, prompt, choices],
+    );
+
+    const sqlQuestions = [...genderNewRows, ...shiftedRows]
       .slice()
       .sort((left, right) => left[1] - right[1]);
 

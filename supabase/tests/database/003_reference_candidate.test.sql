@@ -15,10 +15,12 @@ select has_trigger(
   'candidate_revealsにupdated_at triggerがある'
 );
 
-insert into public.demo_candidates (id, avatar_alias, conversation_profile, active)
+-- demo_candidates.genderは202608220004_gender_matching.sqlでNOT NULLになったため、
+-- テスト用の挿入にも値を与える(値そのものはこのテストの検証対象ではない)。
+insert into public.demo_candidates (id, avatar_alias, gender, conversation_profile, active)
 values
-  ('10000000-0000-4000-8000-000000000001', '公開候補', '{"interests":["読書"]}', true),
-  ('10000000-0000-4000-8000-000000000002', '非公開候補', '{"interests":["料理"]}', false);
+  ('10000000-0000-4000-8000-000000000001', '公開候補', 'female', '{"interests":["読書"]}', true),
+  ('10000000-0000-4000-8000-000000000002', '非公開候補', 'male', '{"interests":["料理"]}', false);
 
 insert into public.candidate_reveals (candidate_id, full_name, company, department, bio)
 values (

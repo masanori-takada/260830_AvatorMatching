@@ -15,8 +15,8 @@ describe("質問定義の整合性", () => {
     expect(orders).toEqual(Array.from({ length: TOTAL_QUESTIONS }, (_unused, index) => index + 1));
   });
 
-  it("TOTAL_QUESTIONSはINTERVIEW_QUESTIONSの件数と一致する(41問)", () => {
-    expect(TOTAL_QUESTIONS).toBe(41);
+  it("TOTAL_QUESTIONSはINTERVIEW_QUESTIONSの件数と一致する(42問)", () => {
+    expect(TOTAL_QUESTIONS).toBe(42);
     expect(INTERVIEW_QUESTIONS).toHaveLength(TOTAL_QUESTIONS);
   });
 
@@ -39,9 +39,9 @@ describe("質問定義の整合性", () => {
     }
   });
 
-  it("質問コードはq+2桁数字の形式で、q01〜q41の範囲に収まる", () => {
+  it("質問コードはq+2桁数字の形式で、q01〜q42の範囲に収まる", () => {
     for (const { code } of INTERVIEW_QUESTIONS) {
-      expect(code).toMatch(/^q(?:0[1-9]|[123][0-9]|4[01])$/);
+      expect(code).toMatch(/^q(?:0[1-9]|[123][0-9]|4[012])$/);
     }
   });
 

@@ -6,6 +6,7 @@ import {
   FIRST_CHOICE_OPTION_1,
   FIRST_CHOICE_OPTION_2,
   FIRST_CHOICE_QUESTION_ORDER,
+  mypageAnswerLocator,
   selectInterviewChoice,
   startInterview,
   TOTAL_INTERVIEW_QUESTIONS,
@@ -42,7 +43,7 @@ test("マッチング開始前はマイページから回答済み質問を修�
 
   await page.goto("/mypage");
   await expect(page.getByRole("heading", { name: "マイページ" })).toBeVisible();
-  await expect(page.getByText(FIRST_CHOICE_OPTION_1)).toBeVisible();
+  await expect(mypageAnswerLocator(page, FIRST_CHOICE_QUESTION_ORDER).getByText(FIRST_CHOICE_OPTION_1)).toBeVisible();
 
   // マイページの「修正する」リンクは回答済み質問を表示順(displayOrder)昇順で並べる前提のため、
   // 最初の選択式質問(FIRST_CHOICE_QUESTION_ORDER)に対応するリンクをその位置(0始まり)で選ぶ。
@@ -56,7 +57,7 @@ test("マッチング開始前はマイページから回答済み質問を修�
   await expect(page).toHaveURL(new RegExp(`/interview/${answeredThrough + 1}$`));
 
   await page.goto("/mypage");
-  await expect(page.getByText(FIRST_CHOICE_OPTION_2)).toBeVisible();
+  await expect(mypageAnswerLocator(page, FIRST_CHOICE_QUESTION_ORDER).getByText(FIRST_CHOICE_OPTION_2)).toBeVisible();
 });
 
 test("マッチング処理開始後は回答修正ができないことを説明する(FR-008, エッジケース)", async ({ page }) => {

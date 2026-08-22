@@ -1,0 +1,14 @@
+.spinner {
+  animation: shared-spinner-spin 0.8s linear infinite;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  border-top-color: var(--color-wine);
+  display: block;
+  flex-shrink: 0;
+}
+
+@keyframes shared-spinner-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

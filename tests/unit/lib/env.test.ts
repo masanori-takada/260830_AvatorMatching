@@ -48,6 +48,33 @@ describe("parseServerEnv", () => {
     expect(() => parseServerEnv({ AI_PROVIDER: "gemini" })).toThrow("GEMINI_API_KEY");
   });
 
+  it("AI_PROVIDER=openaiでOPENAI_API_KEY・OPENAI_MODELがあれば受理する", () => {
+    expect(
+      parseServerEnv({
+        AI_PROVIDER: "openai",
+        // テスト専用のダミー値であり実際のAPIキーではない
+        OPENAI_API_KEY: "dummy-test-key-not-real",
+        OPENAI_MODEL: "dummy-test-model-not-real",
+      }),
+    ).toEqual({
+      AI_PROVIDER: "openai",
+      OPENAI_API_KEY: "dummy-test-key-not-real",
+      OPENAI_MODEL: "dummy-test-model-not-real",
+    });
+  });
+
+  it("AI_PROVIDER=openaiなのにOPENAI_API_KEYが無ければ拒否する", () => {
+    expect(() =>
+      parseServerEnv({ AI_PROVIDER: "openai", OPENAI_MODEL: "dummy-test-model-not-real" }),
+    ).toThrow("OPENAI_API_KEY");
+  });
+
+  it("AI_PROVIDER=openaiなのにOPENAI_MODELが無ければ拒否する", () => {
+    expect(() =>
+      parseServerEnv({ AI_PROVIDER: "openai", OPENAI_API_KEY: "dummy-test-key-not-real" }),
+    ).toThrow("OPENAI_MODEL");
+  });
+
   it("ACCESS_CODEが未設定でも受理する(ゲート無効)", () => {
     expect(parseServerEnv({ AI_PROVIDER: "mock" }).ACCESS_CODE).toBeUndefined();
   });

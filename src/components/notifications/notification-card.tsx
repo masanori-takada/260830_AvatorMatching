@@ -4,6 +4,7 @@ import { useFormStatus } from "react-dom";
 
 import type { NotificationItem } from "@/features/notifications/server/queries";
 
+import { Spinner } from "@/components/feedback/spinner";
 import styles from "@/app/(journey)/journey.module.css";
 import cardStyles from "./notification-card.module.css";
 
@@ -51,7 +52,7 @@ function NotificationButton({ item }: { item: NotificationItem }) {
       </span>
       {pending ? (
         <span className={cardStyles.indicator}>
-          <span aria-hidden="true" className={cardStyles.spinner} />
+          <Spinner />
           <span className={cardStyles.srOnly}>開いています…</span>
         </span>
       ) : (

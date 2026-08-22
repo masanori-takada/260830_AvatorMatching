@@ -13,21 +13,7 @@
   width: 16px;
 }
 
-.spinner {
-  animation: notification-card-spin 0.8s linear infinite;
-  border: 2px solid var(--color-border);
-  border-radius: 50%;
-  border-top-color: var(--color-wine);
-  display: block;
-  height: 14px;
-  width: 14px;
-}
-
-@keyframes notification-card-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+/* スピナー自体はsrc/components/feedback/spinner.tsxの共通実装を使う */
 
 /* 視覚的には隠すが、スクリーンリーダーには読み上げさせる(送信中である旨の告知) */
 .srOnly {

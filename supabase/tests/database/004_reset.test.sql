@@ -4,8 +4,10 @@ select plan(21);
 select tests.create_supabase_user('reset_owner');
 select tests.create_supabase_user('reset_other');
 
-insert into public.demo_candidates(id, avatar_alias, conversation_profile, active)
-values ('00000000-0000-4000-8000-000000000098', 'ハル', '{"values":["対話"]}', true)
+-- demo_candidates.genderは202608220004_gender_matching.sqlでNOT NULLになったため、
+-- テスト用の挿入にも値を与える(値そのものはこのテストの検証対象ではない)。
+insert into public.demo_candidates(id, avatar_alias, gender, conversation_profile, active)
+values ('00000000-0000-4000-8000-000000000098', 'ハル', 'male', '{"values":["対話"]}', true)
 on conflict (id) do nothing;
 insert into public.candidate_reveals(candidate_id, full_name, company, department, bio)
 values ('00000000-0000-4000-8000-000000000098', '架空太郎（完全架空）', '架空リセット株式会社', '架空検証室', '完全に架空の候補者紹介です。')
@@ -95,7 +97,7 @@ select is((select count(*) from public.notifications where match_run_id is null)
 select lives_ok('select public.reset_my_demo_data()', '削除後の再実行もエラーにならない(冪等)');
 
 select tests.authenticate_as('reset_other');
-select is((select count(*) from public.interview_answers), 20::bigint, '別利用者の回答は消えない');
+select is((select count(*) from public.interview_answers), 42::bigint, '別利用者の回答は消えない');
 select is((select count(*) from public.avatar_profiles), 1::bigint, '別利用者のアバタープロフィールは消えない');
 select is((select count(*) from public.match_runs), 1::bigint, '別利用者のmatch_runは消えない');
 select is((select count(*) from public.decisions), 1::bigint, '別利用者の決定は消えない');

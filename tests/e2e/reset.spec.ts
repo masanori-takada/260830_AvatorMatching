@@ -4,6 +4,7 @@ import {
   answerInterviewRange,
   FIRST_CHOICE_OPTION_1,
   FIRST_CHOICE_QUESTION_ORDER,
+  mypageAnswerLocator,
   startInterview,
 } from "./support/interview";
 
@@ -33,7 +34,7 @@ test("回答済みの状態でリセットすると確認のうえ開始画面�
   await answerInterviewRange(page, 1, ANSWER_THROUGH);
 
   await page.goto("/mypage");
-  await expect(page.getByText(FIRST_CHOICE_OPTION_1)).toBeVisible();
+  await expect(mypageAnswerLocator(page, FIRST_CHOICE_QUESTION_ORDER).getByText(FIRST_CHOICE_OPTION_1)).toBeVisible();
 
   await page.goto("/settings");
   await page.getByRole("button", { name: "デモをリセット" }).click();
@@ -47,7 +48,7 @@ test("回答済みの状態でリセットすると確認のうえ開始画面�
   await expect(page.getByRole("button", { name: "インタビューをはじめる" })).toBeVisible();
 
   await page.goto("/mypage");
-  await expect(page.getByText(FIRST_CHOICE_OPTION_1)).toHaveCount(0);
+  await expect(mypageAnswerLocator(page, FIRST_CHOICE_QUESTION_ORDER).getByText(FIRST_CHOICE_OPTION_1)).toHaveCount(0);
   await expect(page.getByText("未回答").first()).toBeVisible();
 });
 
@@ -63,5 +64,5 @@ test("確認ダイアログはキャンセルでき、その場合は削除さ�
   await expect(dialog).toBeHidden();
 
   await page.goto("/mypage");
-  await expect(page.getByText(FIRST_CHOICE_OPTION_1)).toBeVisible();
+  await expect(mypageAnswerLocator(page, FIRST_CHOICE_QUESTION_ORDER).getByText(FIRST_CHOICE_OPTION_1)).toBeVisible();
 });

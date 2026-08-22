@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 import { INTERVIEW_QUESTIONS, TOTAL_QUESTIONS } from "@/features/interview/domain";
 
@@ -45,6 +45,37 @@ export const FIRST_CHOICE_OPTION_1 = firstChoiceQuestion.choices[0]!;
 export const FIRST_CHOICE_OPTION_2 = firstChoiceQuestion.choices[1]!;
 /** 最初の自由記述質問の表示順。 */
 export const FIRST_FREE_TEXT_QUESTION_ORDER = firstFreeTextQuestion.displayOrder;
+
+/**
+ * 自由記述質問すべての表示順の一覧(表示順昇順)。
+ * 「どの表示順が自由記述か」を各specで個別に列挙・ハードコードしないため、
+ * domain.tsの質問定義から一元的に導出する。
+ */
+export const FREE_TEXT_QUESTION_ORDERS: readonly number[] = QUESTIONS_BY_DISPLAY_ORDER.filter(
+  (question) => question.kind === "free_text",
+).map((question) => question.displayOrder);
+
+/**
+ * マイページ上で、指定した表示順(displayOrder)の質問に対応する回答表示欄を指すロケータ。
+ *
+ * `src/components/interview/answer-list.tsx` は各回答欄(section)の `aria-labelledby` に
+ * 質問文の要素を指定しており、質問文がその回答欄のアクセシブルネームになっている。そのため
+ * `page.getByLabel(質問文)` で「その質問の回答欄」だけに絞り込める。
+ *
+ * 選択肢の文言は複数の質問で重複しうる(例:「男性」はq21「性別を教えてください」と
+ * q42「どんな相手を紹介してほしいですか？」の両方に登場する)。マイページ上で特定の質問の
+ * 回答を選択肢の文言だけで検証すると一意に特定できずstrict mode violationになるため、
+ * その場合はこの関数で質問ごとに絞り込んでから `.getByText(...)` 等を使うこと。
+ * 質問文はspecに直書きせずdomain.tsから導出するため、この導出ロジックを複数specに
+ * 複製しないこと。
+ */
+export function mypageAnswerLocator(page: Page, order: number): Locator {
+  const question = QUESTIONS_BY_DISPLAY_ORDER.find((candidate) => candidate.displayOrder === order);
+  if (!question) {
+    throw new Error(`表示順${order}の質問が見つかりません(domain.tsのINTERVIEW_QUESTIONSを確認してください)`);
+  }
+  return page.getByLabel(question.prompt);
+}
 
 /**
  * `/start` からインタビューを開始する。
@@ -121,7 +152,7 @@ export async function answerFreeTextQuestionByKeyboard(page: Page, order: number
 }
 
 /**
- * インタビューを開始し、1問目から最終問(41問目)まで回答して完了画面へ到達する。
+ * インタビューを開始し、1問目から最終問(全問)まで回答して完了画面へ到達する。
  */
 export async function completeInterview(page: Page): Promise<void> {
   await startInterview(page);

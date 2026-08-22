@@ -5,6 +5,7 @@
 // 選択式(ChoiceAnswer)は1クリックで完結し失うものがないため、サーバーフォームのまま据え置く。
 import type { FormEvent } from "react";
 
+import { PendingButton } from "@/components/feedback/pending-button";
 import { useAnswerSubmit } from "@/features/interview/client/use-answer-submit";
 import type { FreeTextQuestion } from "@/features/interview/domain";
 import styles from "./interview.module.css";
@@ -56,9 +57,9 @@ export function TextAnswer({ question, currentAnswer, userId, expectedRevision }
           <p className={styles.error}>{error}</p>
         </div>
       ) : null}
-      <button className={styles.send} disabled={pending} type="submit">
+      <PendingButton className={styles.send} pending={pending} type="submit">
         {error ? "再送する" : "送信"}
-      </button>
+      </PendingButton>
     </form>
   );
 }

@@ -1,0 +1,23 @@
+/*
+ * 送信中インジケータの共通スタイル。
+ * ボタン本体には`position: relative`だけを足し、スピナーは固定サイズ(16px)の
+ * 絶対配置で右端に重ねる。通常表示(pending=false)時はスピナー用のspanごと
+ * 描画されないため、幅・高さ・文言など既存のマークアップ・寸法に影響しない
+ * (視覚回帰テストの基準画像を壊さない)。
+ */
+.wrap {
+  position: relative;
+}
+
+.overlay {
+  align-items: center;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
+  right: var(--space-14, 14px);
+  top: 0;
+  width: 16px;
+}
+

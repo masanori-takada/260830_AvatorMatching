@@ -118,6 +118,25 @@
   color: var(--color-card);
 }
 
+/* 完了画面の補助操作(要約を更新する)用。主操作の.startButtonより強調を下げる
+   (matching-progress.module.cssの.secondaryと同じ見た目に揃える。不具合2対応)。 */
+.secondaryButton {
+  background: transparent;
+  border: 1px solid var(--color-wine);
+  border-radius: var(--radius-button);
+  color: var(--color-wine);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  min-height: 50px;
+  padding: var(--space-8) var(--space-16);
+  width: 100%;
+}
+
+.secondaryButton:active {
+  background: var(--color-pink-soft);
+}
+
 .hint,
 .copy {
   color: var(--color-subtext);

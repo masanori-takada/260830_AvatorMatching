@@ -5,10 +5,12 @@ select tests.create_supabase_user('decision_owner');
 select tests.create_supabase_user('decision_other');
 select tests.create_supabase_user('decline_owner');
 
-insert into public.demo_candidates(id, avatar_alias, conversation_profile, active)
+-- demo_candidates.genderは202608220004_gender_matching.sqlでNOT NULLになったため、
+-- テスト用の挿入にも値を与える(値そのものはこのテストの検証対象ではない)。
+insert into public.demo_candidates(id, avatar_alias, gender, conversation_profile, active)
 values
-  ('00000000-0000-4000-8000-000000000099', 'ソラ', '{"values":["対話"]}', true),
-  ('00000000-0000-4000-8000-000000000098', 'ミナ', '{"values":["行動力"]}', true)
+  ('00000000-0000-4000-8000-000000000099', 'ソラ', 'male', '{"values":["対話"]}', true),
+  ('00000000-0000-4000-8000-000000000098', 'ミナ', 'female', '{"values":["行動力"]}', true)
 on conflict (id) do nothing;
 insert into public.candidate_reveals(candidate_id, full_name, company, department, bio)
 values

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { commitDecision } from "@/features/decision/server/actions";
 
+import { PendingButton } from "./pending-button";
 import styles from "./decision-dialog.module.css";
 
 type DecisionKind = "accept" | "decline";
@@ -69,9 +70,15 @@ export function DecisionDialog({ matchRunId }: { matchRunId: string }) {
             : "辞退すると、この候補の情報は開示されません。確定しますか？"}</p>
           {error ? <p role="alert">{error}</p> : null}
           <div className={styles.actions}>
-            <button disabled={submitting} onClick={() => void confirm()} ref={confirmRef} type="button">
+            <PendingButton
+              disabled={submitting}
+              onClick={() => void confirm()}
+              pending={submitting}
+              ref={confirmRef}
+              type="button"
+            >
               {kind === "accept" ? "承諾を確定する" : "辞退を確定する"}
-            </button>
+            </PendingButton>
             <button disabled={submitting} onClick={close} type="button">キャンセル</button>
           </div>
         </dialog>

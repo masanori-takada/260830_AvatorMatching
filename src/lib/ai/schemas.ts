@@ -76,7 +76,9 @@ export const matchOutputSchema = z.strictObject({
       (refs) => new Set(refs).size === refs.length,
       "answerRefsは発言内で重複できません。",
     ),
-  })).min(8).max(20),
+  // 24〜36発言を狙うプロンプト・response schema(gemini-provider.ts/openai-provider.ts)に対し、
+  // Zod側はモック(8発言)との互換を保つため下限は8のまま、上限だけ3倍相当(36)へ広げる。
+  })).min(8).max(36),
   report: z.strictObject({
     overallScore: z.number().int().min(0).max(100),
     summary: z.string().min(1).max(1000),

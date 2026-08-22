@@ -40,9 +40,11 @@ corepack pnpm dev
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | 必須 | SupabaseプロジェクトのURL。クライアントバンドルに含まれる。 |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 必須 | Supabaseの公開可能キー。クライアントバンドルに含まれる。 |
-| `AI_PROVIDER` | 必須 | `mock` または `gemini`。会話・要約・相性評価をどちらの実装で生成するか。 |
+| `AI_PROVIDER` | 必須 | `mock` / `gemini` / `openai`。会話・要約・相性評価をどの実装で生成するか。 |
 | `GEMINI_API_KEY` | `AI_PROVIDER=gemini` のときのみ必須 | Gemini APIキー。サーバー専用（`server-only`によりクライアントバンドルからのimportをビルド時に検出）。 |
 | `GEMINI_MODEL` | 任意 | Geminiのモデル名を差し替える場合に指定。未設定時の既定は後述。 |
+| `OPENAI_API_KEY` | `AI_PROVIDER=openai` のときのみ必須 | OpenAI APIキー。サーバー専用。 |
+| `OPENAI_MODEL` | `AI_PROVIDER=openai` のときのみ必須 | OpenAIのモデルID。**既定値は用意していない**（コード側でモデルIDを推測しない設計）。未設定のまま `AI_PROVIDER=openai` にすると、起動時にエラーで失敗する。 |
 | `ACCESS_CODE` | 任意 | 限定公開用の合言葉ゲート（`src/proxy.ts`）で使う合言葉。**未設定の場合、ゲートは無効になり誰でもアプリへアクセスできる。** 本番で限定公開にする場合は必ず設定すること。サーバー専用（`src/lib/env/server.ts`）で、クライアントバンドルには含まれない。合言葉はクッキーへそのまま保存せず、`node:crypto`のHMACで導出した値だけを保存し、比較はタイミング安全（`timingSafeEqual`）に行う。 |
 
 ## Supabase
@@ -66,10 +68,11 @@ corepack pnpm dev
 
 - **`AI_PROVIDER=mock`**: `src/lib/ai/mock-provider.ts` を使う。外部通信を行わず、決定的な出力を返す。E2Eテストはこちらで実行する。
 - **`AI_PROVIDER=gemini`**: `src/lib/ai/gemini-provider.ts` の `GeminiAiProvider` が `@google/genai` 経由でGemini APIを呼び出す。
-- **`GEMINI_API_KEY` が未設定のまま `AI_PROVIDER=gemini` にすると、モックへは自動フォールバックせず、その場でエラーを投げて起動・実行を失敗させる。** これは「気づかないままモックの偽の結果を本物の生成結果だと誤認しない」ための意図的な設計であり、`src/lib/ai/provider.ts` に明記されている。
-- **既定モデルとタイムアウト**（`src/lib/ai/gemini-provider.ts` の実値）:
-  - 既定モデル: `gemini-3.5-flash-lite`（`GEMINI_MODEL` 環境変数で差し替え可能）
-  - 生成1回あたりのタイムアウト: `20_000` ミリ秒（20秒）
+- **`AI_PROVIDER=openai`**: `src/lib/ai/openai-provider.ts` の `OpenAiAiProvider` が、OpenAIのChat Completions API（structured outputs）を `fetch` で直接呼び出す（`openai` パッケージへの依存は追加していない）。
+- **`GEMINI_API_KEY` が未設定のまま `AI_PROVIDER=gemini` にすると、モックへは自動フォールバックせず、その場でエラーを投げて起動・実行を失敗させる。** 同様に、**`OPENAI_API_KEY` が未設定のまま `AI_PROVIDER=openai` にした場合、および `OPENAI_MODEL` が未設定のまま `AI_PROVIDER=openai` にした場合も、モックへは自動フォールバックせずエラーで失敗する。** これは「気づかないままモックの偽の結果を本物の生成結果だと誤認しない」ための意図的な設計であり、`src/lib/ai/provider.ts` に明記されている。`OPENAI_MODEL` に既定値を用意していないのは、利用するモデルIDが未確定の時点でコード側が推測しないための判断。
+- **既定モデルとタイムアウト**:
+  - Gemini既定モデル（`src/lib/ai/gemini-provider.ts`）: `gemini-3.5-flash-lite`（`GEMINI_MODEL` 環境変数で差し替え可能）。OpenAIはモデルIDの既定値を持たず、`OPENAI_MODEL` で必ず指定する。
+  - 生成1回あたりのタイムアウト: `25_000` ミリ秒（25秒。会話の発言数を24〜36発言に広げたことに伴い、実測（generateMatch 9.2〜10.1秒）に基づいて20秒から引き上げた）。
   - 契約（Zodスキーマ）を満たさない出力は1回だけ作り直し、それでも満たさない場合は `INVALID_OUTPUT` として失敗させ、不正な会話・レポートを保存しない。
 
 ### プライバシー境界
@@ -120,7 +123,7 @@ Supabaseの匿名サインインにはレート上限がある。E2Eフルスイ
 | --- | --- |
 | `src/app/` | Next.js App Router。ページ・APIルート（`src/app/(journey)`、`src/app/api`）。 |
 | `src/features/` | 機能単位のドメインロジック・UI（`interview`、`matching`、`decision`、`avatar-profile`、`identity`、`notifications`）。 |
-| `src/lib/ai/` | AIプロバイダー抽象化。`provider.ts`（切り替え）、`mock-provider.ts`、`gemini-provider.ts`、`privacy-provider.ts`（プライバシー境界）、`schemas.ts`（出力契約・PII検査）。 |
+| `src/lib/ai/` | AIプロバイダー抽象化。`provider.ts`（切り替え）、`mock-provider.ts`、`gemini-provider.ts`、`openai-provider.ts`、`generation.ts`（タイムアウト・リトライ共通処理）、`prompts.ts`（プロンプト文面）、`privacy-provider.ts`（プライバシー境界）、`schemas.ts`（出力契約・PII検査）。 |
 | `src/lib/env/` | 環境変数の検証。`public.ts`（クライアントへ露出してよい変数）、`server.ts`（サーバー専用変数）。 |
 | `src/lib/supabase/` | Supabaseクライアント初期化（`client.ts`、`server.ts`、`proxy.ts`）。 |
 | `src/components/` | 共有UIコンポーネント。 |

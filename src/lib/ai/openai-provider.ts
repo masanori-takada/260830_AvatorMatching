@@ -8,61 +8,47 @@ import type {
   MatchOutput,
   ProfileInput,
 } from "@/lib/ai/types";
-// 型だけの参照。import typeはビルド時に消えるため、AI_PROVIDER=mockの経路でも実行時にSDKを読み込まない。
-import type { Schema } from "@google/genai";
 
 /**
- * 既定モデル。GEMINI_MODEL環境変数で差し替えられる。
- *
- * 実測比較(同一入力、schema厳格化後、当時の発言数8〜12発言時点):
- * - gemini-3.5-flash-lite: 要約1.6〜2.9秒 / 会話4.4〜4.9秒、契約充足4/4、反映6〜8問
- * - gemini-3.6-flash:      要約6.0〜8.1秒 / 会話11.7〜14.1秒、契約充足3/3、反映8〜13問
- *
- * 3.6 Flashの方が回答をより多く会話へ織り込むが、待ち時間が約3倍になる。
- * (発言数を24〜36発言へ拡大した際の再実測はGEMINI_TIMEOUT_MSのコメントを参照。
- * liteのままでも24発言を安定して満たせたため、既定モデルはliteを維持する。)
- * 体験上の待ち時間を優先してliteを既定とする。2.0系は2026-06-01に停止済みのため使わない。
+ * 生成1回あたりの上限。GeminiAiProvider(gemini-provider.ts)の実測(24〜36発言化後、
+ * generateMatch 9.2〜10.1秒)にもとづく値をそのまま踏襲する。OpenAIのモデルは
+ * OPENAI_MODEL環境変数側で未確定のため、Geminiと別に実測してこの値を調整することはせず、
+ * 同一の安全側の値(実測最大値の2.5倍程度)を暫定的に共有する。
+ * 契約違反時の作り直しは1度だけなので最悪50秒(25秒×2)になるが、これはVercelの
+ * 実行時間上限(maxDuration=60)に収まる。
  */
-export const GEMINI_MODEL = "gemini-3.5-flash-lite";
+export const OPENAI_TIMEOUT_MS = 25_000;
 
 /**
- * 生成1回あたりの上限。
- *
- * 会話発言数を8〜12発言から24〜36発言(3倍)へ広げたことに伴い実測し直した値。
- * 実測(gemini-3.5-flash-lite、既定モデル、q01〜q42相当の42問を入力):
- * - generateProfile: 2.2〜5.1秒
- * - generateMatch(24発言): 9.2〜10.1秒
- * 発言数の上限(36発言)や実運用でのネットワーク変動を見込み、実測最大値(約10秒)へ
- * 2.5倍程度の余裕を持たせた25秒とする。
- * 契約違反時の作り直しは1度だけなので最悪50秒(25秒×2)になるが、これは
- * Vercelの実行時間上限(maxDuration=60、process route/interview完了route)に収まる。
- * それでも間に合わない場合は画面側の30秒タイムアウト(useMatchRun)が先に失敗表示と
- * 再試行手段を提示する(SC-009)。
- */
-export const GEMINI_TIMEOUT_MS = 25_000;
-
-/**
- * Gemini呼び出しの最小境界。
+ * OpenAI呼び出しの最小境界。
  * SDKを直接持ち込まずJSON文字列だけを返させることで、テストで通信を差し替えられる。
  */
-export type GeminiClient = {
+export type OpenAiClient = {
   generateJson(request: { prompt: string; schema: unknown }): Promise<string>;
 };
 
-type GeminiProviderOptions = {
-  client: GeminiClient;
+type OpenAiProviderOptions = {
+  client: OpenAiClient;
   /** providerIdへ記録するモデル名。clientへ渡したモデルと一致させること。 */
-  model?: string;
+  model: string;
   timeoutMs?: number;
 };
 
-/** Geminiのresponse schemaはOpenAPI 3.0のsubset。Zod側の制約は生成後に再検証する。 */
+/**
+ * OpenAIのstructured outputs(strict mode)向けJSON Schema。
+ * strict modeでは各オブジェクトに`additionalProperties: false`が必須で、
+ * `required`は`properties`の全キーを含める必要がある(Geminiのような任意項目は使えない)。
+ * minItems/maxItemsはstrict modeでサポートされないため付けず、件数の担保は
+ * プロンプトの指示とZod契約の再検証(満たさない場合の1回リトライ)に委ねる。
+ */
 const profileResponseSchema = {
   type: "object",
+  additionalProperties: false,
   properties: {
     summary: { type: "string" },
     traits: {
       type: "object",
+      additionalProperties: false,
       properties: {
         leisure: { type: "string" },
         communication: { type: "string" },
@@ -79,22 +65,19 @@ const profileResponseSchema = {
 
 const matchResponseSchema = {
   type: "object",
+  additionalProperties: false,
   properties: {
     messages: {
-      // 件数はプロンプトの指示だけでは守られない。schemaで下限・上限を課す。
-      // 24〜36発言(旧8〜12発言の3倍)。
       type: "array",
-      minItems: 24,
-      maxItems: 36,
       items: {
         type: "object",
+        additionalProperties: false,
         properties: {
           turnIndex: { type: "integer" },
           speaker: { type: "string", enum: ["user_avatar", "candidate_avatar"] },
           body: { type: "string" },
           answerRefs: {
             type: "array",
-            minItems: 1,
             items: { type: "string", enum: ANSWER_REF_CODES },
           },
         },
@@ -103,16 +86,16 @@ const matchResponseSchema = {
     },
     report: {
       type: "object",
+      additionalProperties: false,
       properties: {
         overallScore: { type: "integer" },
         summary: { type: "string" },
         caution: { type: "string" },
         dimensions: {
           type: "array",
-          minItems: 5,
-          maxItems: 5,
           items: {
             type: "object",
+            additionalProperties: false,
             properties: {
               axis: {
                 type: "string",
@@ -139,21 +122,22 @@ const matchResponseSchema = {
 } as const;
 
 /**
- * Geminiを使うAiProvider。
+ * OpenAIを使うAiProvider。GeminiAiProviderと同じ構造(クライアント注入・タイムアウト・
+ * Zod契約での再検証・1回だけの作り直し)を踏襲する。
  * 出力はZod契約で再検証し、満たさない場合は1度だけ作り直す。
  * それでも満たさなければINVALID_OUTPUTとして失敗させ、不正な会話を保存しない。
  */
-export class GeminiAiProvider implements AiProvider {
+export class OpenAiAiProvider implements AiProvider {
   /** 生成に使ったモデルをmatch_runsのproviderへ残すため、実際のモデル名を含める。 */
   readonly providerId: string;
 
-  private readonly client: GeminiClient;
+  private readonly client: OpenAiClient;
   private readonly timeoutMs: number;
 
-  constructor({ client, model = GEMINI_MODEL, timeoutMs = GEMINI_TIMEOUT_MS }: GeminiProviderOptions) {
+  constructor({ client, model, timeoutMs = OPENAI_TIMEOUT_MS }: OpenAiProviderOptions) {
     this.client = client;
     this.timeoutMs = timeoutMs;
-    this.providerId = `gemini:${model}`;
+    this.providerId = `openai:${model}`;
   }
 
   async generateProfile(input: ProfileInput): Promise<AvatarProfileOutput> {
@@ -162,7 +146,7 @@ export class GeminiAiProvider implements AiProvider {
       buildProfilePrompt(input),
       profileResponseSchema,
       this.timeoutMs,
-      "Gemini",
+      "OpenAI",
       (value) => avatarProfileOutputSchema.parse(value),
     );
   }
@@ -176,38 +160,60 @@ export class GeminiAiProvider implements AiProvider {
       buildMatchPrompt(input),
       matchResponseSchema,
       this.timeoutMs,
-      "Gemini",
+      "OpenAI",
       (value) => assertAnswerRefsAreDisclosed(matchOutputSchema.parse(value), disclosedAnswerCodes),
     );
   }
 }
 
-type CreateGeminiClientOptions = {
+type CreateOpenAiClientOptions = {
   apiKey: string;
-  model?: string;
+  model: string;
 };
 
 /**
- * `@google/genai`を実際に呼び出すGeminiClient実装を作る。
- * SDKのimportをここに閉じ込め、動的import(遅延読み込み)にすることで、
- * AI_PROVIDER=mockの経路(この関数が一度も呼ばれない経路)ではSDKがロードされないようにする。
+ * OpenAIのChat Completions API(structured outputs)を実際に呼び出すOpenAiClient実装を作る。
+ * `openai`パッケージへの依存を追加せず、fetchで直接呼び出す(Geminiが`@google/genai`のSDK
+ * importを動的import化してAI_PROVIDER=mockの経路から隔離しているのと同じ意図で、
+ * ここではそもそも外部SDKを持ち込まない)。
  */
-export function createGeminiClient({ apiKey, model = GEMINI_MODEL }: CreateGeminiClientOptions): GeminiClient {
+export function createOpenAiClient({ apiKey, model }: CreateOpenAiClientOptions): OpenAiClient {
   return {
     async generateJson({ prompt, schema }): Promise<string> {
-      const { GoogleGenAI } = await import("@google/genai");
-      const client = new GoogleGenAI({ apiKey });
-      const response = await client.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: schema as Schema,
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
         },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: prompt }],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "avatar_matching_output",
+              strict: true,
+              schema,
+            },
+          },
+        }),
       });
-      const text = response.text;
+
+      if (!response.ok) {
+        // レスポンス本文にAPIキーは含まれないが、念のためステータスとエラーコードだけを残す。
+        const body = await response.text().catch(() => "");
+        throw new Error(
+          `INVALID_OUTPUT: OpenAI APIがエラーを返しました(status=${response.status})。${body.slice(0, 300)}`,
+        );
+      }
+
+      const data = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string | null } }>;
+      };
+      const text = data.choices?.[0]?.message?.content;
       if (!text) {
-        throw new Error("INVALID_OUTPUT: Geminiの応答が空でした。");
+        throw new Error("INVALID_OUTPUT: OpenAIの応答が空でした。");
       }
       return text;
     },

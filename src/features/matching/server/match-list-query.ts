@@ -2,6 +2,13 @@ import { requireUser } from "@/features/identity/server/session";
 import type { MatchRunStatus } from "@/features/matching/server/journey-state";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+export type CompatibilityAxis =
+  | "conversation_flow"
+  | "values_alignment"
+  | "humor_fit"
+  | "mutual_interest"
+  | "mismatch_severity";
+
 export type MatchSummary = {
   matchRunId: string;
   status: MatchRunStatus;
@@ -9,6 +16,9 @@ export type MatchSummary = {
   overallScore: number | null;
   summary: string | null;
   decision: "accept" | "decline" | null;
+  // 軸ごとの相性スコア。完了していないrunや取得できない場合は空配列。
+  // 一覧で「相性スコアだけでなく何が違うのか」を軸ごとに比較できるようにするため(不具合3対応)。
+  dimensions: Array<{ axis: CompatibilityAxis; score: number }>;
 };
 
 export type OwnedMatchSummaries = {
@@ -18,7 +28,8 @@ export type OwnedMatchSummaries = {
 
 type MatchRunRow = { id: string; candidate_id: string; status: MatchRunStatus };
 type CandidateRow = { id: string; avatar_alias: string };
-type ReportRow = { match_run_id: string; overall_score: number; summary: string };
+type ReportRow = { id: string; match_run_id: string; overall_score: number; summary: string };
+type DimensionRow = { report_id: string; axis: CompatibilityAxis; score: number };
 type DecisionRow = { match_run_id: string; kind: "accept" | "decline" };
 
 // マッチ結果一覧(/matches)向けに、利用者が持つ全run(最大3件)を候補アバターの
@@ -47,7 +58,7 @@ export async function getOwnedMatchSummaries(): Promise<OwnedMatchSummaries> {
   const [candidatesResult, reportsResult, decisionsResult] = await Promise.all([
     client.from("demo_candidates").select("id, avatar_alias").in("id", candidateIds),
     completedRunIds.length > 0
-      ? client.from("compatibility_reports").select("match_run_id, overall_score, summary")
+      ? client.from("compatibility_reports").select("id, match_run_id, overall_score, summary")
         .eq("owner_id", userId).in("match_run_id", completedRunIds)
       : Promise.resolve({ data: [] as ReportRow[], error: null }),
     client.from("decisions").select("match_run_id, kind").eq("owner_id", userId).in("match_run_id", runIds),
@@ -56,12 +67,24 @@ export async function getOwnedMatchSummaries(): Promise<OwnedMatchSummaries> {
   if (reportsResult.error) throw reportsResult.error;
   if (decisionsResult.error) throw decisionsResult.error;
 
+  const reportRows = (reportsResult.data ?? []) as ReportRow[];
+  const reportIds = reportRows.map((report) => report.id);
+  const dimensionsResult = reportIds.length > 0
+    ? await client.from("compatibility_dimensions").select("report_id, axis, score")
+      .eq("owner_id", userId).in("report_id", reportIds)
+    : { data: [] as DimensionRow[], error: null };
+  if (dimensionsResult.error) throw dimensionsResult.error;
+
   const aliasByCandidateId = new Map(
     ((candidatesResult.data ?? []) as CandidateRow[]).map((row) => [row.id, row.avatar_alias]),
   );
-  const reportByRunId = new Map(
-    ((reportsResult.data ?? []) as ReportRow[]).map((row) => [row.match_run_id, row]),
-  );
+  const reportByRunId = new Map(reportRows.map((row) => [row.match_run_id, row]));
+  const dimensionsByReportId = new Map<string, Array<{ axis: CompatibilityAxis; score: number }>>();
+  for (const row of (dimensionsResult.data ?? []) as DimensionRow[]) {
+    const list = dimensionsByReportId.get(row.report_id) ?? [];
+    list.push({ axis: row.axis, score: row.score });
+    dimensionsByReportId.set(row.report_id, list);
+  }
   const decisionByRunId = new Map(
     ((decisionsResult.data ?? []) as DecisionRow[]).map((row) => [row.match_run_id, row.kind]),
   );
@@ -78,6 +101,7 @@ export async function getOwnedMatchSummaries(): Promise<OwnedMatchSummaries> {
       overallScore: report?.overall_score ?? null,
       summary: report?.summary ?? null,
       decision: decisionByRunId.get(run.id) ?? null,
+      dimensions: report ? (dimensionsByReportId.get(report.id) ?? []) : [],
     };
   });
 

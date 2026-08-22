@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell/app-shell";
+import { SubmitButton } from "@/components/feedback/submit-button";
 import styles from "@/components/interview/interview.module.css";
 import { startAnonymousJourney } from "@/features/identity/server/actions";
 import { TOTAL_QUESTIONS } from "@/features/interview/domain";
@@ -31,7 +32,7 @@ export default async function StartPage({ searchParams }: StartPageProps) {
           </p>
         ) : null}
         <form action={start}>
-          <button className={styles.startButton} type="submit">インタビューをはじめる</button>
+          <SubmitButton className={styles.startButton}>インタビューをはじめる</SubmitButton>
         </form>
       </section>
     </AppShell>

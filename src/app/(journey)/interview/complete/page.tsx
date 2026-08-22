@@ -29,7 +29,7 @@ export default async function InterviewCompletePage() {
   }
 
   return (
-    <AppShell>
+    <AppShell activeTab="home" showNavigation>
       <Progress answeredCount={TOTAL_QUESTIONS} />
       <CompletionForm action={complete} />
     </AppShell>

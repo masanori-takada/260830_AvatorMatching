@@ -6,9 +6,16 @@ select tests.create_supabase_user('match_other');
 select tests.create_supabase_user('stale_owner');
 select tests.create_supabase_user('retry_owner');
 
+-- q42(相手に紹介してほしい性別)だけは「こだわらない」で回答させる。デフォルトの
+-- choices->>0(先頭の選択肢="男性")のままだと候補が男性3人だけに絞り込まれ、
+-- 以降のアサーションが前提にしているルナ(候補id ...001、女性)がrunに含まれなくなるため。
 insert into public.interview_answers(owner_id, question_code, answer)
 select owner.uid, question.code,
-  case when question.kind = 'choice' then question.choices ->> 0 else '安全な自由回答' end
+  case
+    when question.code = 'q42' then 'こだわらない'
+    when question.kind = 'choice' then question.choices ->> 0
+    else '安全な自由回答'
+  end
 from (values
   (tests.get_supabase_uid('match_owner')),
   (tests.get_supabase_uid('stale_owner')),
@@ -17,15 +24,15 @@ from (values
 cross join public.interview_questions question;
 
 -- avatar_profiles.source_revisionは「回答時点のrevision合計」を表す。
--- interview_answersの初回insertはrevision=1固定なので、41問ぶんの合計は41になる。
+-- interview_answersの初回insertはrevision=1固定なので、42問ぶんの合計は42になる。
 insert into public.avatar_profiles(owner_id, summary, traits, source_revision, provider)
 select owner.uid, '安全な要約',
   '{"leisure":"読書","communication":"傾聴","lifestyle":"安定","values":"誠実","relationships":"対話","priorities":"調和"}',
   owner.source_revision, 'mock-v1'
 from (values
-  (tests.get_supabase_uid('match_owner'), 41),
-  (tests.get_supabase_uid('stale_owner'), 40),
-  (tests.get_supabase_uid('retry_owner'), 41)
+  (tests.get_supabase_uid('match_owner'), 42),
+  (tests.get_supabase_uid('stale_owner'), 41),
+  (tests.get_supabase_uid('retry_owner'), 42)
 ) owner(uid, source_revision);
 
 create function pg_temp.valid_match_payload()
