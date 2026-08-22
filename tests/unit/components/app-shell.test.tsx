@@ -2,7 +2,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { AppShell } from "@/components/app-shell/app-shell";
-import { StatusBar } from "@/components/app-shell/status-bar";
 
 describe("AppShell", () => {
   afterEach(cleanup);
@@ -32,14 +31,14 @@ describe("AppShell", () => {
       screen.queryByRole("navigation", { name: "メインナビゲーション" }),
     ).not.toBeInTheDocument();
   });
-});
 
-describe("StatusBar", () => {
-  afterEach(cleanup);
+  it("ダミーの時刻・ステータスアイコン・上部の空き領域を表示しない", () => {
+    render(<AppShell>本文</AppShell>);
 
-  it("装飾的な端末状態を支援技術から隠す", () => {
-    const { container } = render(<StatusBar />);
+    const appScreen = screen.getByRole("region", { name: "アプリ画面" });
 
-    expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
+    expect(screen.queryByText("9:41")).not.toBeInTheDocument();
+    expect(appScreen.querySelector("svg")).not.toBeInTheDocument();
+    expect(appScreen.firstElementChild).toBe(screen.getByRole("main"));
   });
 });

@@ -21,46 +21,6 @@
   width: 100%;
 }
 
-.statusBar {
-  align-items: center;
-  color: var(--color-text);
-  display: flex;
-  flex: none;
-  font-size: 13px;
-  font-weight: 600;
-  height: 44px;
-  justify-content: space-between;
-  line-height: 1;
-  padding: 0 var(--space-22);
-}
-
-.statusIcons {
-  align-items: center;
-  display: flex;
-  gap: var(--space-6);
-}
-
-.statusIcons svg {
-  display: block;
-  fill: none;
-  height: 17px;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.6;
-  width: 17px;
-}
-
-.statusIcons svg:first-child {
-  fill: currentColor;
-  stroke: none;
-}
-
-.statusIcons svg:last-child {
-  height: 14px;
-  width: 28px;
-}
-
 .header {
   align-items: center;
   display: flex;
