@@ -1,9 +1,7 @@
 import { processOwnedMatch } from "@/features/matching/server/process";
 
-// Gemini呼び出しはGEMINI_TIMEOUT_MS(20秒)まで待つ設計で、
-// スキーマ違反時は1回だけ作り直すため最悪約40秒かかりうる。
-// Vercelの既定の実行時間上限（10〜15秒）では途中で打ち切られて
-// 会話生成が必ず失敗するため、明示的に上限を延長する。
+// OpenAI生成1回の既定待ち時間は60秒で、Vercel側の実行時間上限も60秒。
+// 今回はユーザー指定によりmaxDurationを変更せず、この条件で実測する。
 export const maxDuration = 60;
 
 export async function POST(

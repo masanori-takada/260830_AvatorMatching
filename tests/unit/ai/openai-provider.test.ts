@@ -170,6 +170,38 @@ describe("OpenAiAiProvider", () => {
     await expect(provider.generateMatch(matchInput)).rejects.toThrow("TIMEOUT");
   });
 
+  it("既定タイムアウト: 60秒までは応答を待ち、60秒で失敗する", async () => {
+    vi.useFakeTimers();
+    try {
+      const client: OpenAiClient = {
+        // 永遠に解決しないPromiseで、既定待ち時間そのものを検証する
+        generateJson: () => new Promise(() => {}),
+      };
+      const provider = new OpenAiAiProvider({ client, model: "test-model" });
+      let settled = false;
+      const result = provider.generateMatch(matchInput).then(
+        () => {
+          settled = true;
+          return undefined;
+        },
+        (error: unknown) => {
+          settled = true;
+          return error;
+        },
+      );
+
+      await vi.advanceTimersByTimeAsync(59_999);
+      expect(settled).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(1);
+      const error = await result;
+      expect(error).toBeInstanceOf(AiProviderError);
+      expect((error as AiProviderError).diagnostics).toEqual({ provider: "OpenAI", kind: "timeout" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("プロンプトに自由記述の内容が含まれ、かつ識別情報が含まれないこと", async () => {
     const client: OpenAiClient = {
       generateJson: vi.fn().mockResolvedValue(JSON.stringify(buildValidProfileOutput())),

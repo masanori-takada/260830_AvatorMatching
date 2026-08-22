@@ -4,14 +4,10 @@ import { assertAnswerRefsAreDisclosed, avatarProfileOutputSchema, matchOutputSch
 import type { AiProvider, AvatarProfileOutput, MatchInput, MatchOutput, ProfileInput } from "@/lib/ai/types";
 
 /**
- * 生成1回あたりの上限。GeminiAiProvider(gemini-provider.ts)の実測(24〜36発言化後、
- * generateMatch 9.2〜10.1秒)にもとづく値をそのまま踏襲する。OpenAIのモデルは
- * OPENAI_MODEL環境変数側で未確定のため、Geminiと別に実測してこの値を調整することはせず、
- * 同一の安全側の値(実測最大値の2.5倍程度)を暫定的に共有する。
- * 契約違反時の作り直しは1度だけなので最悪50秒(25秒×2)になるが、これはVercelの
- * 実行時間上限(maxDuration=60)に収まる。
+ * 生成1回あたりの上限。OpenAIでの生成時間はまだ実測できていないため、
+ * 本番で25秒のタイムアウトが発生したことを受け、指定された60秒を暫定値とする。
  */
-export const OPENAI_TIMEOUT_MS = 25_000;
+export const OPENAI_TIMEOUT_MS = 60_000;
 
 /**
  * OpenAI呼び出しの最小境界。
