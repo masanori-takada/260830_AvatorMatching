@@ -3,7 +3,12 @@
 import { ZodError } from "zod";
 
 import { requireUser } from "@/features/identity/server/session";
-import { INTERVIEW_QUESTIONS } from "@/features/interview/domain";
+import {
+  filterDisclosableAnswers,
+  INTERVIEW_QUESTIONS_BY_CODE,
+  TOTAL_QUESTIONS,
+  type SensitiveGroup,
+} from "@/features/interview/domain";
 import { InterviewAnswerValidationError, parseInterviewAnswer } from "@/features/interview/schemas";
 import { getAiProvider } from "@/lib/ai/provider";
 import { avatarProfileOutputSchema } from "@/lib/ai/schemas";
@@ -42,19 +47,21 @@ export async function completeInterview(): Promise<ActionResult<{
       throw error;
     }
 
+    // interview_answersは question_code (テキスト) 昇順で取得しているため、
+    // INTERVIEW_QUESTIONS_BY_CODE(コード昇順)とインデックス対応させて比較できる。
     const answers = (data ?? []) as AnswerRow[];
     if (
-      answers.length !== 20
-      || answers.some((answer, index) => answer.question_code !== INTERVIEW_QUESTIONS[index]?.code)
+      answers.length !== TOTAL_QUESTIONS
+      || answers.some((answer, index) => answer.question_code !== INTERVIEW_QUESTIONS_BY_CODE[index]?.code)
     ) {
-      return failure("VALIDATION_ERROR", "20問すべてに回答してください。", false);
+      return failure("VALIDATION_ERROR", `${TOTAL_QUESTIONS}問すべてに回答してください。`, false);
     }
 
     let normalizedAnswers;
     try {
       normalizedAnswers = answers.map((answer, index) => ({
         questionCode: answer.question_code,
-        answer: parseInterviewAnswer(INTERVIEW_QUESTIONS[index]!, answer.answer),
+        answer: parseInterviewAnswer(INTERVIEW_QUESTIONS_BY_CODE[index]!, answer.answer),
         revision: answer.revision,
       }));
     } catch (error) {
@@ -64,9 +71,16 @@ export async function completeInterview(): Promise<ActionResult<{
       throw error;
     }
 
+    // アバター要約は特定の相手(候補者)を前提とせずに一度だけ生成し、以後すべてのマッチで
+    // 使い回される(src/features/matching/server/queries.tsのgetOwnedMatchInputが毎回参照する)。
+    // 開示可否は「本人と相手の双方の同意」で決まる相手ペア依存の判断のため、
+    // まだ相手が定まらないこの時点ではデリケートな回答(および開示意思の回答そのもの)を
+    // 一切含めない。空集合をfilterDisclosableAnswersへ渡すことで、
+    // デリケートな質問はすべて除外される(同意状況にかかわらず安全側に倒す)。
+    const noConsentGroups: ReadonlySet<SensitiveGroup> = new Set();
     const provider = getAiProvider();
     const output = avatarProfileOutputSchema.parse(await provider.generateProfile({
-      answers: normalizedAnswers,
+      answers: filterDisclosableAnswers(normalizedAnswers, noConsentGroups, noConsentGroups),
     }));
     const sourceRevision = answers.reduce((sum, answer) => sum + answer.revision, 0);
     const { data: existingData, error: existingError } = await supabase

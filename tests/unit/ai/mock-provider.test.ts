@@ -53,6 +53,35 @@ describe("MockAiProvider", () => {
     expect(output).not.toContain("user@example.com");
   });
 
+  it("実際に渡した回答コード(q01〜q03)だけをanswerRefsで参照する(開示同意の仕組みを損なわない)", async () => {
+    const provider = new MockAiProvider();
+    const profile = await provider.generateProfile({ answers });
+    const match = await provider.generateMatch({
+      answers,
+      profile,
+      candidate: { avatarAlias: "ルナ", conversationProfile: { interests: ["読書"] } },
+    });
+
+    const referencedCodes = new Set(match.messages.flatMap(({ answerRefs }) => answerRefs));
+    for (const code of referencedCodes) {
+      expect(answers.some((answer) => answer.questionCode === code)).toBe(true);
+    }
+  });
+
+  it("渡していない回答コードを参照する出力になっていれば、生成時に検出して拒否する", async () => {
+    const provider = new MockAiProvider();
+    const profile = await provider.generateProfile({ answers });
+    // q01〜q03を渡さない(開示NGで除外された想定)。モックは常にq01〜q03を参照するため、
+    // この場合は「渡していないコードを参照した」契約違反として拒否されるはずである。
+    const withoutQ01ToQ03 = answers.filter((answer) => !["q01", "q02", "q03"].includes(answer.questionCode));
+
+    await expect(provider.generateMatch({
+      answers: withoutQ01ToQ03,
+      profile,
+      candidate: { avatarAlias: "ルナ", conversationProfile: { interests: ["読書"] } },
+    })).rejects.toThrow("AIへ渡していない質問コード");
+  });
+
   it("未対応provider名はfail-closedに拒否する", () => {
     expect(() => getAiProvider("bedrock" as string)).toThrow("未対応のAI provider");
   });

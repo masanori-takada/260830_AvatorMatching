@@ -14,7 +14,29 @@ describe("startMatch", () => {
     requireUser.mockResolvedValue({ userId: "owner-a" });
   });
 
-  it("owner検証後に原子的start RPCの冪等結果を返す", async () => {
+  it("owner検証後に原子的start RPCの冪等結果を複数件返す", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: [
+        { match_run_id: "11111111-1111-4111-8111-111111111111", status: "queued" },
+        { match_run_id: "22222222-2222-4222-8222-222222222222", status: "queued" },
+        { match_run_id: "33333333-3333-4333-8333-333333333333", status: "queued" },
+      ], error: null,
+    });
+    createServerSupabaseClient.mockResolvedValue({ rpc });
+
+    await expect(startMatch()).resolves.toEqual({
+      ok: true,
+      data: { matches: [
+        { matchRunId: "11111111-1111-4111-8111-111111111111", status: "queued" },
+        { matchRunId: "22222222-2222-4222-8222-222222222222", status: "queued" },
+        { matchRunId: "33333333-3333-4333-8333-333333333333", status: "queued" },
+      ] },
+    });
+    expect(requireUser).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith("start_match_run");
+  });
+
+  it("候補者が3人未満でも、いる分だけ返す", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: [{ match_run_id: "11111111-1111-4111-8111-111111111111", status: "queued" }], error: null,
     });
@@ -22,10 +44,8 @@ describe("startMatch", () => {
 
     await expect(startMatch()).resolves.toEqual({
       ok: true,
-      data: { matchRunId: "11111111-1111-4111-8111-111111111111", status: "queued" },
+      data: { matches: [{ matchRunId: "11111111-1111-4111-8111-111111111111", status: "queued" }] },
     });
-    expect(requireUser).toHaveBeenCalledOnce();
-    expect(rpc).toHaveBeenCalledWith("start_match_run");
   });
   it("回答revisionとプロフィールがずれた場合は再生成を案内する", async () => {
     createServerSupabaseClient.mockResolvedValue({
@@ -46,7 +66,7 @@ describe("startMatch", () => {
     });
     await expect(startMatch()).resolves.toMatchObject({
       ok: true,
-      data: { status: "completed" },
+      data: { matches: [{ status: "completed" }] },
     });
   });
 });

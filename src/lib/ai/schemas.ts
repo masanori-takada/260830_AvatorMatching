@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { INTERVIEW_QUESTION_CODES } from "@/features/interview/domain";
+
 const piiPatterns = [
   /[\w.+-]+@[\w.-]+\.[a-z]{2,}/iu,
   /(?:https?:\/\/|www\.)\S+/iu,
@@ -69,7 +71,8 @@ export const matchOutputSchema = z.strictObject({
     turnIndex: z.number().int().min(1),
     speaker: z.enum(["user_avatar", "candidate_avatar"]),
     body: z.string().min(1).max(1000),
-    answerRefs: z.array(z.string().regex(/^q(?:0[1-9]|1[0-9]|20)$/)).min(1).refine(
+    // 参照可能な質問コードはdomain.tsのINTERVIEW_QUESTIONSから導出する。
+    answerRefs: z.array(z.enum(INTERVIEW_QUESTION_CODES)).min(1).refine(
       (refs) => new Set(refs).size === refs.length,
       "answerRefsは発言内で重複できません。",
     ),
@@ -102,3 +105,35 @@ export const matchOutputSchema = z.strictObject({
     context.addIssue({ code: "custom", message: "3回答以上の根拠が必要です。", path: ["messages"] });
   }
 });
+
+/**
+ * answerRefsが「実際にAIへ渡した回答コード」の部分集合であることを検証する。
+ *
+ * matchOutputSchemaのanswerRefsはINTERVIEW_QUESTION_CODES全体(41問)をenumとして許可している
+ * (静的なzod schemaは、リクエストごとに変わる「実際に渡した回答」を表現できないため)。
+ * しかし開示同意が無いデリケートな回答はAIへ渡していない(getOwnedMatchInput/completeInterviewが
+ * 事前に除外している)。それにもかかわらずAIがそのコードをanswerRefsに含めると、値そのものは
+ * 漏れなくても「この項目について会話された」という体裁だけが利用者に見えてしまい、
+ * 開示同意の仕組みの意味を損なう。
+ *
+ * そのためAI出力を受け取った直後に、実際に渡した回答コードの集合(disclosedAnswerCodes)と
+ * 突き合わせて検証する。GeminiAiProvider/MockAiProviderの両方から呼ばれる共通経路とし、
+ * 同じ検査が2箇所に重複して書かれることを避ける。
+ *
+ * GeminiAiProvider側はこの関数をgenerateValidatedのvalidateコールバック内で呼ぶことで、
+ * 既存の契約違反時の再試行(1度だけ作り直す)にそのまま乗る。
+ */
+export function assertAnswerRefsAreDisclosed<T extends { messages: readonly { answerRefs: readonly string[] }[] }>(
+  output: T,
+  disclosedAnswerCodes: ReadonlySet<string>,
+): T {
+  const undisclosedCode = output.messages
+    .flatMap(({ answerRefs }) => answerRefs)
+    .find((code) => !disclosedAnswerCodes.has(code));
+  if (undisclosedCode !== undefined) {
+    throw new Error(
+      `answerRefsに、AIへ渡していない質問コード(${undisclosedCode})が含まれています。`,
+    );
+  }
+  return output;
+}

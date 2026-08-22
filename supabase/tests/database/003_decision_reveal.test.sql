@@ -1,26 +1,47 @@
 begin;
-select plan(20);
+select plan(25);
 
 select tests.create_supabase_user('decision_owner');
 select tests.create_supabase_user('decision_other');
 select tests.create_supabase_user('decline_owner');
 
 insert into public.demo_candidates(id, avatar_alias, conversation_profile, active)
-values ('00000000-0000-4000-8000-000000000099', 'ソラ', '{"values":["対話"]}', true)
+values
+  ('00000000-0000-4000-8000-000000000099', 'ソラ', '{"values":["対話"]}', true),
+  ('00000000-0000-4000-8000-000000000098', 'ミナ', '{"values":["行動力"]}', true)
 on conflict (id) do nothing;
 insert into public.candidate_reveals(candidate_id, full_name, company, department, bio)
-values ('00000000-0000-4000-8000-000000000099', '星野みなと（完全架空）', '架空株式会社ルーメン', '架空企画室', '完全に架空の候補者紹介です。')
+values
+  ('00000000-0000-4000-8000-000000000099', '星野みなと（完全架空）', '架空株式会社ルーメン', '架空企画室', '完全に架空の候補者紹介です。'),
+  ('00000000-0000-4000-8000-000000000098', '架空みなみ（完全架空）', '架空株式会社アステル', '架空推進室', '完全に架空の候補者紹介です。')
 on conflict (candidate_id) do nothing;
 
+-- decision_ownerには2件のcompleted runを持たせ、「承諾は1利用者1件まで」
+-- (owner単位)を検証できるようにする。他のownerは既存どおり1件のまま。
 insert into public.match_runs(owner_id, candidate_id, status, provider, completed_at)
 values
   (tests.get_supabase_uid('decision_owner'), '00000000-0000-4000-8000-000000000099', 'completed', 'mock-v1', now()),
+  (tests.get_supabase_uid('decision_owner'), '00000000-0000-4000-8000-000000000098', 'completed', 'mock-v1', now()),
   (tests.get_supabase_uid('decision_other'), '00000000-0000-4000-8000-000000000099', 'completed', 'mock-v1', now()),
   (tests.get_supabase_uid('decline_owner'), '00000000-0000-4000-8000-000000000099', 'completed', 'mock-v1', now());
 
-select id as owner_run_id from public.match_runs where owner_id = tests.get_supabase_uid('decision_owner') \gset
+select id as owner_run_id from public.match_runs
+  where owner_id = tests.get_supabase_uid('decision_owner') and candidate_id = '00000000-0000-4000-8000-000000000099' \gset
+select id as owner_second_run_id from public.match_runs
+  where owner_id = tests.get_supabase_uid('decision_owner') and candidate_id = '00000000-0000-4000-8000-000000000098' \gset
 select id as other_run_id from public.match_runs where owner_id = tests.get_supabase_uid('decision_other') \gset
 select id as decline_run_id from public.match_runs where owner_id = tests.get_supabase_uid('decline_owner') \gset
+
+-- decisions_owner_accept_uidxが「1owner1件のaccept」をDBレベルで保証していることを、
+-- RPC(commit_decision)を介さず直接確認する(アプリ側のチェックだけに頼っていないことの検証)。
+-- ここではまだauthenticatedロールへ切り替えていないため、テーブル所有者権限で直接INSERTできる。
+insert into public.decisions(owner_id, match_run_id, kind) values (tests.get_supabase_uid('decision_owner'), :'owner_run_id', 'accept');
+select throws_ok(
+  format('insert into public.decisions(owner_id, match_run_id, kind) values (%L, %L, %L)',
+    tests.get_supabase_uid('decision_owner'), :'owner_second_run_id', 'accept'),
+  '23505', null, '同一ownerの2件目acceptはDBの部分ユニークインデックスで拒否される'
+);
+delete from public.decisions where owner_id = tests.get_supabase_uid('decision_owner');
 
 select ok(not has_function_privilege('anon', 'public.commit_decision(uuid,public.decision_kind)', 'EXECUTE'), 'anonは決定RPCを実行できない');
 select ok(not has_function_privilege('anon', 'public.get_candidate_reveal(uuid)', 'EXECUTE'), 'anonは開示RPCを実行できない');
@@ -31,6 +52,7 @@ set local role authenticated;
 select tests.authenticate_as('decision_owner');
 select throws_ok('select * from public.candidate_reveals', '42501', null, '開示テーブルを直接SELECTできない');
 select is((select count(*) from public.get_candidate_reveal(:'owner_run_id')), 0::bigint, '未決定では開示0件');
+select is((select count(*) from public.get_candidate_reveal(:'owner_second_run_id')), 0::bigint, 'もう一方の候補も未決定では開示0件');
 
 select tests.authenticate_as('decision_other');
 select is((select count(*) from public.get_candidate_reveal(:'owner_run_id')), 0::bigint, '別ownerには開示0件');
@@ -46,6 +68,17 @@ select is((select full_name from public.get_candidate_reveal(:'owner_run_id')), 
 select throws_ok(format('select public.commit_decision(%L, %L)', :'owner_run_id', 'decline'), 'P0001', 'DECISION_CONFLICT:accept', 'opposite retryは競合');
 select throws_ok(format('insert into public.decisions(owner_id, match_run_id, kind) values (%L, %L, %L)', tests.get_supabase_uid('decision_owner'), :'owner_run_id', 'accept'), '42501', null, '直接INSERTできない');
 select throws_ok(format('update public.decisions set kind = %L where match_run_id = %L', 'decline', :'owner_run_id'), '42501', null, '直接UPDATEできない');
+
+-- 「承諾は1利用者1件まで」: 既に別runで承諾済みのownerは、もう一方の候補(未決定)を
+-- 承諾できない。かつ、その未決定候補の開示は依然として0件のまま(SC-006)。
+select throws_ok(
+  format('select public.commit_decision(%L, %L)', :'owner_second_run_id', 'accept'),
+  'P0001', 'ACCEPT_ALREADY_DECIDED', '別候補で承諾済みなら2件目のacceptは拒否される'
+);
+select is((select count(*) from public.decisions where match_run_id = :'owner_second_run_id'), 0::bigint,
+  '拒否された2件目には決定が残らない');
+select is((select count(*) from public.get_candidate_reveal(:'owner_second_run_id')), 0::bigint,
+  '承諾していない候補の開示は0件のまま');
 
 select tests.authenticate_as('decline_owner');
 select is((select count(*) from public.get_candidate_reveal(:'decline_run_id')), 0::bigint, '辞退前も開示0件');

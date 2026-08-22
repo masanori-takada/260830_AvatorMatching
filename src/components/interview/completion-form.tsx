@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { TOTAL_QUESTIONS } from "@/features/interview/domain";
 import type { ActionResult } from "@/lib/result";
 import styles from "./interview.module.css";
 
@@ -27,7 +28,7 @@ export function CompletionForm({
         </>
       ) : (
         <>
-          <p className={styles.copy}>20問の回答から、あなたのアバター要約を作成します。</p>
+          <p className={styles.copy}>{TOTAL_QUESTIONS}問の回答から、あなたのアバター要約を作成します。</p>
           {result && !result.ok ? <p className={styles.error} role="alert">{result.error.message}</p> : null}
         </>
       )}

@@ -1,3 +1,10 @@
+import {
+  CONSENT_QUESTION_CODE_BY_GROUP,
+  filterDisclosableAnswers,
+  isDisclosureConsentGiven,
+  TOTAL_QUESTIONS,
+  type SensitiveGroup,
+} from "@/features/interview/domain";
 import type { MatchInput } from "@/lib/ai/types";
 import type { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -5,7 +12,23 @@ type ServerClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
 
 type AnswerRow = { question_code: `q${string}`; answer: string; revision: number };
 type ProfileRow = { summary: string; traits: Record<string, string> };
-type CandidateRow = { avatar_alias: string; conversation_profile: Record<string, unknown> };
+type CandidateRow = {
+  avatar_alias: string;
+  conversation_profile: Record<string, unknown>;
+  disclosure_consent_groups: string[];
+};
+
+/** 本人の回答から、開示OKとした開示グループの集合を導く。 */
+function buildConsentGroups(answers: readonly AnswerRow[]): ReadonlySet<SensitiveGroup> {
+  const groups = new Set<SensitiveGroup>();
+  for (const [group, questionCode] of CONSENT_QUESTION_CODE_BY_GROUP) {
+    const answer = answers.find((row) => row.question_code === questionCode);
+    if (answer && isDisclosureConsentGiven(answer.answer)) {
+      groups.add(group);
+    }
+  }
+  return groups;
+}
 
 export async function getOwnedMatchInput(
   client: ServerClient,
@@ -18,27 +41,42 @@ export async function getOwnedMatchInput(
 
   const { data: answers, error: answersError } = await client.from("interview_answers")
     .select("question_code, answer, revision").eq("owner_id", ownerId).order("question_code");
-  if (answersError || !answers || answers.length !== 20) throw answersError ?? new Error("INTERVIEW_INCOMPLETE");
+  if (answersError || !answers || answers.length !== TOTAL_QUESTIONS) throw answersError ?? new Error("INTERVIEW_INCOMPLETE");
 
   const { data: profile, error: profileError } = await client.from("avatar_profiles")
     .select("summary, traits").eq("owner_id", ownerId).single();
   if (profileError || !profile) throw profileError ?? new Error("PROFILE_NOT_FOUND");
 
   const { data: candidate, error: candidateError } = await client.from("demo_candidates")
-    .select("avatar_alias, conversation_profile").eq("id", run.candidate_id).eq("active", true).single();
+    .select("avatar_alias, conversation_profile, disclosure_consent_groups")
+    .eq("id", run.candidate_id).eq("active", true).single();
   if (candidateError || !candidate) throw candidateError ?? new Error("CANDIDATE_NOT_FOUND");
 
-  return {
-    answers: (answers as AnswerRow[]).map((answer) => ({
+  const typedAnswers = answers as AnswerRow[];
+  const typedCandidate = candidate as CandidateRow;
+
+  // デリケートな回答は、本人と相手の双方が対応する開示グループへ同意している場合だけ
+  // AIへの入力に含める(src/features/interview/domain.tsのfilterDisclosableAnswersに一元化)。
+  // ここで除外することで、AIへは最初から渡さない(プロンプト上の指示だけに頼らない)。
+  const selfConsentGroups = buildConsentGroups(typedAnswers);
+  const counterpartConsentGroups = new Set(typedCandidate.disclosure_consent_groups as SensitiveGroup[]);
+  const disclosableAnswers = filterDisclosableAnswers(
+    typedAnswers.map((answer) => ({
       questionCode: answer.question_code, answer: answer.answer, revision: answer.revision,
     })),
+    selfConsentGroups,
+    counterpartConsentGroups,
+  );
+
+  return {
+    answers: disclosableAnswers,
     profile: {
       summary: (profile as ProfileRow).summary,
       traits: (profile as ProfileRow).traits,
     },
     candidate: {
-      avatarAlias: (candidate as CandidateRow).avatar_alias,
-      conversationProfile: (candidate as CandidateRow).conversation_profile,
+      avatarAlias: typedCandidate.avatar_alias,
+      conversationProfile: typedCandidate.conversation_profile,
     },
   };
 }

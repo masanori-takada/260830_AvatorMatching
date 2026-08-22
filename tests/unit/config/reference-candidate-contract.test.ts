@@ -6,7 +6,13 @@ const migrationPath = resolve(
   process.cwd(),
   "supabase/migrations/2026081300025_reference_candidate.sql",
 );
-const seedPath = resolve(process.cwd(), "supabase/seed.sql");
+// 候補者3人・開示情報の投入は202608220003_fix_start_match_run.sqlに一本化されている
+// (`supabase db push`がseed.sqlを実行しないため。詳細はそのマイグレーション冒頭のコメントを参照)。
+// seed.sqlはこのマイグレーションを参照するだけの案内コメントのみを持つ。
+const candidateSeedPath = resolve(
+  process.cwd(),
+  "supabase/migrations/202608220003_fix_start_match_run.sql",
+);
 
 describe("架空候補のDB契約", () => {
   it("両テーブルが共通timestampとupdated_at triggerを持つ", () => {
@@ -47,8 +53,8 @@ describe("架空候補のDB契約", () => {
     expect(sql).not.toMatch(/create policy[^;]+on public\.candidate_reveals/i);
   });
 
-  it("固定1件を識別情報なしの匿名面と完全架空の開示面へ冪等投入する", () => {
-    const seed = readFileSync(seedPath, "utf8");
+  it("固定3件を識別情報なしの匿名面と完全架空の開示面へ冪等投入する", () => {
+    const seed = readFileSync(candidateSeedPath, "utf8");
     const profileSource = seed.match(/\$profile\$([\s\S]*?)\$profile\$\s*::jsonb/)?.[1];
 
     expect(profileSource).toBeDefined();
@@ -62,9 +68,11 @@ describe("架空候補のDB契約", () => {
     expect(JSON.stringify(profile)).not.toMatch(
       /full_name|company|department|email|phone|address|birth|location/i,
     );
-    expect(seed.match(/on conflict/gi)).toHaveLength(2);
+    // 候補者3人分・開示3人分=6件の`on conflict`を持つ。ここでは1人目(ルナ)の
+    // ブロックの中身だけを検証するため、件数の下限だけを確認する。
+    expect((seed.match(/on conflict/gi) ?? []).length).toBeGreaterThanOrEqual(2);
     expect(seed).toMatch(
-      /where \(demo_candidates\.avatar_alias, demo_candidates\.conversation_profile, demo_candidates\.active\)\s+is distinct from \(excluded\.avatar_alias, excluded\.conversation_profile, excluded\.active\)/i,
+      /where \(demo_candidates\.avatar_alias, demo_candidates\.conversation_profile, demo_candidates\.disclosure_consent_groups, demo_candidates\.active\)\s+is distinct from \(excluded\.avatar_alias, excluded\.conversation_profile, excluded\.disclosure_consent_groups, excluded\.active\)/i,
     );
     expect(seed).toMatch(
       /where \(candidate_reveals\.full_name, candidate_reveals\.company, candidate_reveals\.department, candidate_reveals\.bio\)\s+is distinct from \(excluded\.full_name, excluded\.company, excluded\.department, excluded\.bio\)/i,
@@ -79,5 +87,12 @@ describe("架空候補のDB契約", () => {
     )?.[1];
     expect(bio).toBeDefined();
     expect(Array.from(bio!).length).toBeLessThanOrEqual(500);
+
+    // seed.sqlは候補者データを持たず、マイグレーションを参照する案内コメントのみである
+    // ことを確認する(データが2箇所で食い違うのを防ぐ)。
+    const seedSql = readFileSync(resolve(process.cwd(), "supabase/seed.sql"), "utf8");
+    expect(seedSql).not.toContain("星乃 ルナ（完全架空）");
+    expect(seedSql).not.toMatch(/\$profile\$/);
+    expect(seedSql).toContain("202608220003_fix_start_match_run.sql");
   });
 });

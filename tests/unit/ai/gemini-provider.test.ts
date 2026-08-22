@@ -116,6 +116,39 @@ describe("GeminiAiProvider", () => {
     expect(generateJson).toHaveBeenCalledTimes(2);
   });
 
+  it("再試行: answerRefsに渡していないコードを含む出力は1回目で拒否され、2回目の正常な出力で成功する", async () => {
+    const outputWithUndisclosedRef = {
+      ...buildValidMatchOutput(),
+      messages: buildValidMatchOutput().messages.map((message, index) => index === 0
+        ? { ...message, answerRefs: ["q05"] } // matchInput.answersにq05は含まれない
+        : message),
+    };
+    const generateJson = vi
+      .fn()
+      .mockResolvedValueOnce(JSON.stringify(outputWithUndisclosedRef))
+      .mockResolvedValueOnce(JSON.stringify(buildValidMatchOutput()));
+    const provider = new GeminiAiProvider({ client: { generateJson } });
+
+    const result = await provider.generateMatch(matchInput);
+
+    expect(result).toEqual(buildValidMatchOutput());
+    expect(generateJson).toHaveBeenCalledTimes(2);
+  });
+
+  it("失敗: 2回ともanswerRefsに渡していないコードを含めればINVALID_OUTPUTを投げる", async () => {
+    const outputWithUndisclosedRef = {
+      ...buildValidMatchOutput(),
+      messages: buildValidMatchOutput().messages.map((message, index) => index === 0
+        ? { ...message, answerRefs: ["q05"] }
+        : message),
+    };
+    const generateJson = vi.fn().mockResolvedValue(JSON.stringify(outputWithUndisclosedRef));
+    const provider = new GeminiAiProvider({ client: { generateJson } });
+
+    await expect(provider.generateMatch(matchInput)).rejects.toThrow("INVALID_OUTPUT");
+    expect(generateJson).toHaveBeenCalledTimes(2);
+  });
+
   it("タイムアウト: 応答が遅いとき制限時間で失敗する", async () => {
     const client: GeminiClient = {
       // 永遠に解決しないPromiseで、応答が遅い状態を再現する

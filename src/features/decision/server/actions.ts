@@ -37,6 +37,9 @@ export async function commitDecision(input: DecisionInput): Promise<CommitDecisi
         },
       };
     }
+    if (error?.message.includes("ACCEPT_ALREADY_DECIDED")) {
+      return failure("STATE_CONFLICT", "すでに他の候補を承諾しています。承諾できるのはお一人だけです。", false);
+    }
     if (error?.message.includes("MATCH_NOT_FOUND")) {
       return failure("NOT_FOUND", "対象のマッチが見つかりません。", false);
     }

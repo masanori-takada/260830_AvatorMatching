@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell/app-shell";
 import { CompletionForm } from "@/components/interview/completion-form";
 import { Progress } from "@/components/interview/progress";
 import { completeInterview } from "@/features/avatar-profile/server/service";
+import { TOTAL_QUESTIONS } from "@/features/interview/domain";
 import { getInterviewState } from "@/features/interview/server/queries";
 import { requireUser } from "@/features/identity/server/session";
 
@@ -15,7 +16,7 @@ export const maxDuration = 60;
 export default async function InterviewCompletePage() {
   const { userId } = await requireUser();
   const state = await getInterviewState(userId);
-  if (state.answeredCount < 20) {
+  if (state.answeredCount < TOTAL_QUESTIONS) {
     const firstUnanswered = state.questions.find(
       (question) => !state.answers.some((answer) => answer.questionCode === question.code),
     );
@@ -29,7 +30,7 @@ export default async function InterviewCompletePage() {
 
   return (
     <AppShell>
-      <Progress answeredCount={20} />
+      <Progress answeredCount={TOTAL_QUESTIONS} />
       <CompletionForm action={complete} />
     </AppShell>
   );

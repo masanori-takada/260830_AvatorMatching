@@ -1,9 +1,10 @@
 import { z } from "zod";
 
-import type { InterviewQuestion } from "@/features/interview/domain";
+import { INTERVIEW_QUESTION_CODES, type InterviewQuestion } from "@/features/interview/domain";
 
 export const saveInterviewAnswerInputSchema = z.object({
-  questionCode: z.string().regex(/^q(?:0[1-9]|1[0-9]|20)$/),
+  // 質問コードはdomain.tsのINTERVIEW_QUESTIONSから導出する(q01〜q41を個別に列挙しない)。
+  questionCode: z.enum(INTERVIEW_QUESTION_CODES),
   answer: z.string(),
   expectedRevision: z.number().int().positive().nullable(),
 });

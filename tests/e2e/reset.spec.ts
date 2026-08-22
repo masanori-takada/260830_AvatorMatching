@@ -1,6 +1,15 @@
 import { expect, test } from "./support/access-gate";
 
-import { answerInterviewRange, startInterview } from "./support/interview";
+import {
+  answerInterviewRange,
+  FIRST_CHOICE_OPTION_1,
+  FIRST_CHOICE_QUESTION_ORDER,
+  startInterview,
+} from "./support/interview";
+
+// 選択式の質問に1問も回答していない状態は想定しづらいため、最初の選択式質問を含む
+// 範囲まで回答する(元のテスト意図「複数問回答した状態」を保つため最低5問は回答する)。
+const ANSWER_THROUGH = Math.max(5, FIRST_CHOICE_QUESTION_ORDER);
 
 test("設定画面からプライバシー説明・FAQへ遷移できる", async ({ page }) => {
   await startInterview(page);
@@ -21,10 +30,10 @@ test("設定画面からプライバシー説明・FAQへ遷移できる", async
 
 test("回答済みの状態でリセットすると確認のうえ開始画面へ戻り、以前の回答は残らない(FR-035)", async ({ page }) => {
   await startInterview(page);
-  await answerInterviewRange(page, 1, 5);
+  await answerInterviewRange(page, 1, ANSWER_THROUGH);
 
   await page.goto("/mypage");
-  await expect(page.getByText("外へ出かける")).toBeVisible();
+  await expect(page.getByText(FIRST_CHOICE_OPTION_1)).toBeVisible();
 
   await page.goto("/settings");
   await page.getByRole("button", { name: "デモをリセット" }).click();
@@ -38,13 +47,13 @@ test("回答済みの状態でリセットすると確認のうえ開始画面�
   await expect(page.getByRole("button", { name: "インタビューをはじめる" })).toBeVisible();
 
   await page.goto("/mypage");
-  await expect(page.getByText("外へ出かける")).toHaveCount(0);
+  await expect(page.getByText(FIRST_CHOICE_OPTION_1)).toHaveCount(0);
   await expect(page.getByText("未回答").first()).toBeVisible();
 });
 
 test("確認ダイアログはキャンセルでき、その場合は削除されない", async ({ page }) => {
   await startInterview(page);
-  await answerInterviewRange(page, 1, 3);
+  await answerInterviewRange(page, 1, ANSWER_THROUGH);
 
   await page.goto("/settings");
   await page.getByRole("button", { name: "デモをリセット" }).click();
@@ -54,5 +63,5 @@ test("確認ダイアログはキャンセルでき、その場合は削除さ�
   await expect(dialog).toBeHidden();
 
   await page.goto("/mypage");
-  await expect(page.getByText("外へ出かける")).toBeVisible();
+  await expect(page.getByText(FIRST_CHOICE_OPTION_1)).toBeVisible();
 });

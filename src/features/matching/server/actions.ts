@@ -8,8 +8,12 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type MatchStatus = "queued" | "processing" | "completed" | "failed";
 type StartMatchRow = { match_run_id: string; status: MatchStatus };
+export type MatchRunSummary = { matchRunId: string; status: MatchStatus };
 
-export async function startMatch(): Promise<ActionResult<{ matchRunId: string; status: MatchStatus }>> {
+// start_match_run()は候補者ごとに最大3件のrunを返す(3人の候補と勝手に会話が
+// 始まる体験のため)。呼び出し側(matching/page.tsx)はこの配列をそのまま
+// MatchingProgressへ渡し、進行状況をまとめて表示する。
+export async function startMatch(): Promise<ActionResult<{ matches: MatchRunSummary[] }>> {
   try {
     await requireUser();
     const client = await createServerSupabaseClient();
@@ -18,11 +22,12 @@ export async function startMatch(): Promise<ActionResult<{ matchRunId: string; s
       return failure("STATE_CONFLICT", "回答が更新されています。プロフィールを再生成してください。", false);
     }
     if (error) throw error;
-    const row = (data as StartMatchRow[] | null)?.[0];
-    if (!row || !["queued", "processing", "completed", "failed"].includes(row.status)) {
+    const rows = (data as StartMatchRow[] | null) ?? [];
+    const validStatuses = new Set(["queued", "processing", "completed", "failed"]);
+    if (rows.length === 0 || rows.some((row) => !validStatuses.has(row.status))) {
       return failure("STATE_CONFLICT", "マッチ処理はすでに開始されています。", false);
     }
-    return success({ matchRunId: row.match_run_id, status: row.status });
+    return success({ matches: rows.map((row) => ({ matchRunId: row.match_run_id, status: row.status })) });
   } catch (error) {
     const actionError = toActionError(error);
     if (actionError.code === "INTERNAL_ERROR") {

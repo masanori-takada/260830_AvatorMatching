@@ -63,7 +63,8 @@ export async function getInterviewState(userId: string): Promise<{
 
 function toQuestion(row: QuestionRow): InterviewQuestion {
   if (row.kind === "choice") {
-    if (row.choices.length !== 3) {
+    // DB側のjsonb_array_length制約(2〜12)と対応させる。3個固定ではない。
+    if (row.choices.length < 2 || row.choices.length > 12) {
       throw new Error("選択式質問の選択肢数が不正です。");
     }
     return {
@@ -72,9 +73,13 @@ function toQuestion(row: QuestionRow): InterviewQuestion {
       category: row.category,
       kind: "choice",
       prompt: row.prompt,
-      choices: [row.choices[0]!, row.choices[1]!, row.choices[2]!],
+      choices: row.choices,
       minLength: null,
       maxLength: null,
+      // デリケート判定はsrc/features/interview/domain.tsのINTERVIEW_QUESTIONSに一元化されており、
+      // DBから読んだ回答収集用の質問データはその判定を持たない(回答収集画面では使わないため)。
+      sensitiveGroup: null,
+      consentForGroup: null,
     };
   }
 
@@ -87,5 +92,7 @@ function toQuestion(row: QuestionRow): InterviewQuestion {
     choices: [],
     minLength: 1,
     maxLength: 500,
+    sensitiveGroup: null,
+    consentForGroup: null,
   };
 }

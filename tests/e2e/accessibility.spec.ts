@@ -3,7 +3,17 @@ import { createRequire } from "node:module";
 import { expect, test, type Page } from "./support/access-gate";
 
 import { createAvatarSummary } from "./support/avatar-summary";
-import { answerInterviewRange, completeInterview, startInterview } from "./support/interview";
+import {
+  answerChoiceQuestionByKeyboard,
+  answerFreeTextQuestionByKeyboard,
+  answerInterviewRange,
+  completeInterview,
+  FIRST_CHOICE_QUESTION_ORDER,
+  FIRST_FREE_TEXT_QUESTION_ORDER,
+  startInterview,
+  TOTAL_INTERVIEW_QUESTIONS,
+} from "./support/interview";
+import { reachFirstUndecidedReport } from "./support/matching";
 
 // axe-coreは@axe-core/playwrightを追加せず、既にpackage.jsonへ入っているaxe-core本体を
 // スクリプトタグとして直接注入して使う(依存を増やさないため)。
@@ -78,17 +88,23 @@ test.describe("accessibility axe (SC-011)", () => {
     await expectNoSeriousViolations(page, "/faq");
 
     await page.goto("/interview/4");
-    await answerInterviewRange(page, 4, 20);
+    await answerInterviewRange(page, 4, TOTAL_INTERVIEW_QUESTIONS);
     await expect(page).toHaveURL(/\/interview\/complete$/);
     await expectNoSeriousViolations(page, "/interview/complete");
 
     await createAvatarSummary(page);
 
     await page.goto("/matching");
-    await expect(page.getByRole("link", { name: "相性レポートを見る" })).toBeVisible({ timeout: 30_000 });
+    // /matchingの完了リンクは候補数を含む「マッチ結果を見る（N人）」表記のため正規表現で判定する
+    // (matching-progress.tsx)。個別の相性レポートへは、まず/matchesの候補一覧を経由する。
+    await expect(page.getByRole("link", { name: /マッチ結果を見る/u })).toBeVisible({ timeout: 30_000 });
     await expectNoSeriousViolations(page, "/matching(完了)");
 
-    await page.getByRole("link", { name: "相性レポートを見る" }).click();
+    await page.getByRole("link", { name: /マッチ結果を見る/u }).click();
+    await expect(page).toHaveURL(/\/matches$/);
+    await expectNoSeriousViolations(page, "/matches");
+
+    await page.getByRole("link", { name: /相性 \d+%/u }).first().click();
     await expect(page.getByRole("meter")).toHaveCount(5);
     const reportUrl = page.url();
     await expectNoSeriousViolations(page, "/report");
@@ -106,11 +122,7 @@ test.describe("accessibility axe (SC-011)", () => {
   test("辞退後の/declinedでcritical/serious違反が0件になる", async ({ page }) => {
     test.setTimeout(120_000);
 
-    await completeInterview(page);
-    await createAvatarSummary(page);
-    await page.goto("/matching");
-    await expect(page.getByRole("link", { name: "相性レポートを見る" })).toBeVisible({ timeout: 30_000 });
-    await page.getByRole("link", { name: "相性レポートを見る" }).click();
+    await reachFirstUndecidedReport(page);
     await page.getByRole("button", { name: "辞退する" }).click();
     await page.getByRole("button", { name: "辞退を確定する" }).click();
     await expect(page).toHaveURL(/\/declined$/);
@@ -126,23 +138,17 @@ test.describe("keyboard operation (FR-038)", () => {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/interview\/1$/);
 
-    // 1問目(選択式): Tabで選択肢グループの先頭ボタンへ到達し、Enterで送信する
-    await page.keyboard.press("Tab");
-    await expect(page.getByRole("group", { name: "回答を選択" }).getByRole("button").first()).toBeFocused();
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/interview\/2$/);
+    // 最初の選択式質問まではマウス操作で進め(表示順は質問構成で変わりうるため固定しない)、
+    // その質問をTab→Enterのキーボード操作だけで送信できることを検証する。
+    await answerInterviewRange(page, 1, FIRST_CHOICE_QUESTION_ORDER - 1);
+    await answerChoiceQuestionByKeyboard(page, FIRST_CHOICE_QUESTION_ORDER);
+    await expect(page).toHaveURL(new RegExp(`/interview/${FIRST_CHOICE_QUESTION_ORDER + 1}$`));
 
-    await answerInterviewRange(page, 2, 3);
-
-    // 4問目(自由記述): テキストエリアへフォーカスして入力し、Tab移動後にEnter/Spaceで送信する
-    await expect(page).toHaveURL(/\/interview\/4$/);
-    const textarea = page.getByLabel("回答を入力");
-    await textarea.focus();
-    await page.keyboard.type("キーボードのみで入力した回答です");
-    await page.keyboard.press("Tab");
-    await expect(page.getByRole("button", { name: "送信" })).toBeFocused();
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/interview\/5$/);
+    // 最初の自由記述質問まではマウス操作で進め、その質問を入力→Tab→Enterの
+    // キーボード操作だけで送信できることを検証する。
+    await answerInterviewRange(page, FIRST_CHOICE_QUESTION_ORDER + 1, FIRST_FREE_TEXT_QUESTION_ORDER - 1);
+    await answerFreeTextQuestionByKeyboard(page, FIRST_FREE_TEXT_QUESTION_ORDER, "キーボードのみで入力した回答です");
+    await expect(page).toHaveURL(new RegExp(`/interview/${FIRST_FREE_TEXT_QUESTION_ORDER + 1}$`));
   });
 
   test("設定のリセット確認ダイアログをキーボードだけで開閉できる", async ({ page }) => {
@@ -203,7 +209,7 @@ test.describe("reduced motion", () => {
 
     // 処理中の脈動アイコン(matching-progress.module.cssの.pulse)が存在する場合、
     // 通常値の"1.8s"から変化していること(アニメーションが実質無効化されたこと)を確認する。
-    // モック処理は高速に完了しうるため、既に完了して"相性レポートを見る"リンクへ
+    // モック処理は高速に完了しうるため、既に完了して"マッチ結果を見る"リンクへ
     // 切り替わっている場合もある。どちらの状態でも情報が失われず表示され続けることが重要。
     const pulse = page.locator('[class*="pulse"]');
     if ((await pulse.count()) > 0) {
@@ -214,7 +220,7 @@ test.describe("reduced motion", () => {
     await expect(
       page
         .getByRole("heading", { name: "アバターが会話中です" })
-        .or(page.getByRole("link", { name: "相性レポートを見る" })),
+        .or(page.getByRole("link", { name: /マッチ結果を見る/u })),
     ).toBeVisible({ timeout: 30_000 });
   });
 });

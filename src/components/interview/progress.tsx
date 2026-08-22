@@ -1,3 +1,4 @@
+import { TOTAL_QUESTIONS } from "@/features/interview/domain";
 import styles from "./interview.module.css";
 
 type ProgressProps = {
@@ -5,7 +6,7 @@ type ProgressProps = {
   total?: number;
 };
 
-export function Progress({ answeredCount, total = 20 }: ProgressProps) {
+export function Progress({ answeredCount, total = TOTAL_QUESTIONS }: ProgressProps) {
   const safeCount = Math.min(Math.max(answeredCount, 0), total);
   return (
     <>

@@ -4,43 +4,67 @@ import { describe, expect, it } from "vitest";
 
 import { INTERVIEW_QUESTIONS } from "@/features/interview/domain";
 
-const expectedQuestions = [
-  ["q01", "休日・趣味", "choice", "休日の過ごし方に最も近いのは？", ["外へ出かける", "家でゆっくりする", "日によって半々"]],
-  ["q02", "休日・趣味", "choice", "自由な時間は誰と過ごすことが多い？", ["一人", "親しい人と少人数", "大勢の仲間"]],
-  ["q03", "休日・趣味", "choice", "予定の立て方はどちらに近い？", ["早めに決めたい", "その日の気分で決めたい", "相手に合わせたい"]],
-  ["q04", "休日・趣味", "free_text", "最近、時間を忘れて夢中になったことは？", []],
-  ["q05", "会話・人付き合い", "choice", "初対面の人と話すときの自分は？", ["自分から話す", "相手の話を聞く", "空気を見て決める"]],
-  ["q06", "会話・人付き合い", "choice", "心地よい会話のバランスは？", ["たくさん話し合う", "静かな時間も楽しむ", "相手に合わせる"]],
-  ["q07", "会話・人付き合い", "choice", "意見が違ったときに取りやすい行動は？", ["率直に話し合う", "少し時間を置く", "共通点を探す"]],
-  ["q08", "会話・人付き合い", "free_text", "思わず笑ってしまうのは、どんなとき？", []],
-  ["q09", "仕事・生活リズム", "choice", "平日の夜の過ごし方に近いのは？", ["外出や交流", "家で休む", "日によって変わる"]],
-  ["q10", "仕事・生活リズム", "choice", "忙しい時期の連絡頻度は？", ["短くても毎日", "落ち着いた時にまとめて", "相手と相談して決める"]],
-  ["q11", "仕事・生活リズム", "choice", "会う頻度の希望に近いのは？", ["週に何度か", "週に1回程度", "無理のない時に"]],
-  ["q12", "価値観・将来観", "free_text", "日々の生活で大切にしていることは？", []],
-  ["q13", "価値観・将来観", "choice", "お金の使い方で大切なのは？", ["経験に使う", "将来に備える", "バランスを取る"]],
-  ["q14", "価値観・将来観", "choice", "新しいことへの向き合い方は？", ["まず試す", "よく調べてから", "信頼する人と一緒なら試す"]],
-  ["q15", "価値観・将来観", "choice", "将来のことを話すペースは？", ["早めに話したい", "関係を築いてから", "自然な流れに任せたい"]],
-  ["q16", "恋愛・関係性", "choice", "好意や感謝の伝え方に近いのは？", ["言葉で伝える", "行動で示す", "両方を大切にする"]],
-  ["q17", "恋愛・関係性", "choice", "一緒にいて心地よいと感じる相手は？", ["笑いのツボが合う", "価値観が近い", "新しい視点をくれる"]],
-  ["q18", "恋愛・関係性", "free_text", "すれ違いが起きたとき、相手にどう向き合ってほしい？", []],
-  ["q19", "譲れない条件", "choice", "関係を築くうえで最も大切なのは？", ["誠実さ", "生活リズム", "会話の相性"]],
-  ["q20", "自由回答", "free_text", "相手に、これだけは知っておいてほしいことは？", []],
-] as const;
+// SQLとTypeScriptに同じ質問リストが二重に存在する(supabase/migrations/ と domain.ts)ため、
+// 食い違いを検出できるようこのテストで両者を突き合わせる。
+//
+// 既存質問(q01〜q20)は 202608130002_interview.sql に元のdisplay_order(1〜20)のまま定義され、
+// 202608220001_interview_profile_questions.sql のUPDATE文で+21され22〜41になる。
+// 新規質問(q21〜q41)は202608220001側にdisplay_order 1〜21として直接定義される
+// (基本プロフィール17問=1〜17、開示意思4問=18〜21)。
+// このテストは両ファイルを読み、実際に適用される最終状態を組み立ててdomain.tsと比較する。
 
-describe("固定20問のSQL同期契約", () => {
-  it("TypeScriptとmigrationが仕様の全20問と一致する", () => {
-    expect(INTERVIEW_QUESTIONS.map(({ code, category, kind, prompt, choices }) => [
-      code, category, kind, prompt, [...choices],
-    ])).toEqual(expectedQuestions);
+type QuestionRow = [code: string, displayOrder: number, category: string, kind: string, prompt: string, choices: unknown];
 
-    const sql = readFileSync(
+// 202608130002側は1行1件、202608220001側は可読性のため2行に分けて書いているため、
+// フィールド区切りの空白は改行を含めて許容する(\s*)。
+const INSERT_ROW_PATTERN =
+  /\('(q\d{2})',\s*(\d+),\s*'([^']+)',\s*'(choice|free_text)',\s*'([^']+)',\s*'(\[[^']*\])',\s*(?:null|\d+),\s*(?:null|\d+)\)[,;]/g;
+
+function parseInsertRows(sql: string): QuestionRow[] {
+  return [...sql.matchAll(INSERT_ROW_PATTERN)].map((match) => [
+    match[1]!,
+    Number(match[2]),
+    match[3]!,
+    match[4]!,
+    match[5]!,
+    JSON.parse(match[6]!),
+  ]);
+}
+
+describe("固定41問のSQL同期契約", () => {
+  it("TypeScriptとmigrationが仕様の全41問(既存20問+基本プロフィール17問+開示意思4問)と一致する", () => {
+    const baseSql = readFileSync(
       resolve(process.cwd(), "supabase/migrations/202608130002_interview.sql"),
       "utf8",
     );
-    const rows = [...sql.matchAll(
-      /\('(q\d{2})', \d+, '([^']+)', '(choice|free_text)', '([^']+)', '(\[[^']*\])', (?:null|\d+), (?:null|\d+)\)[,;]/g,
-    )].map((match) => [match[1], match[2], match[3], match[4], JSON.parse(match[5]!)]);
+    const profileSql = readFileSync(
+      resolve(process.cwd(), "supabase/migrations/202608220001_interview_profile_questions.sql"),
+      "utf8",
+    );
 
-    expect(rows).toEqual(expectedQuestions);
+    // 202608130002側の既存20問には、その後のUPDATEで加算されるオフセットを適用する。
+    const offsetMatch = /display_order\s*=\s*display_order\s*\+\s*(\d+)/.exec(profileSql);
+    expect(offsetMatch, "既存質問のdisplay_orderをずらすUPDATE文が見つかりません").not.toBeNull();
+    const offset = Number(offsetMatch![1]);
+
+    const existingRows = parseInsertRows(baseSql).map(
+      ([code, displayOrder, category, kind, prompt, choices]): QuestionRow => [
+        code, displayOrder + offset, category, kind, prompt, choices,
+      ],
+    );
+    const newRows = parseInsertRows(profileSql);
+
+    const sqlQuestions = [...newRows, ...existingRows]
+      .slice()
+      .sort((left, right) => left[1] - right[1]);
+
+    const domainQuestions = INTERVIEW_QUESTIONS
+      .map(({ code, displayOrder, category, kind, prompt, choices }): QuestionRow => [
+        code, displayOrder, category, kind, prompt, [...choices],
+      ])
+      .slice()
+      .sort((left, right) => left[1] - right[1]);
+
+    expect(sqlQuestions).toEqual(domainQuestions);
   });
 });

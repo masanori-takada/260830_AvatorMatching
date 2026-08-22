@@ -1,4 +1,5 @@
-import { avatarProfileOutputSchema, matchOutputSchema } from "@/lib/ai/schemas";
+import { INTERVIEW_QUESTION_CODES } from "@/features/interview/domain";
+import { assertAnswerRefsAreDisclosed, avatarProfileOutputSchema, matchOutputSchema } from "@/lib/ai/schemas";
 import type {
   AiProvider,
   AvatarProfileOutput,
@@ -66,11 +67,11 @@ const profileResponseSchema = {
   required: ["summary", "traits"],
 } as const;
 
-/** 回答参照に使える質問コード。schema側でenum化しないとモデルが独自の文字列を返す。 */
-const ANSWER_REF_CODES = Array.from(
-  { length: 20 },
-  (_unused, index) => `q${String(index + 1).padStart(2, "0")}`,
-);
+/**
+ * 回答参照に使える質問コード。schema側でenum化しないとモデルが独自の文字列を返す。
+ * domain.tsのINTERVIEW_QUESTIONSから導出し、質問数が変わってもここは変更不要にする。
+ */
+const ANSWER_REF_CODES = INTERVIEW_QUESTION_CODES;
 
 const matchResponseSchema = {
   type: "object",
@@ -186,7 +187,7 @@ function buildMatchPrompt(input: MatchInput): string {
     "- 実際に人が話しているような自然な日本語にすること。定型文の言い換えや、回答の丸写しにしない。",
     "- 相手の発言を受けて話を展開すること。相槌、質問、共感、軽い笑いを含めてよい。",
     "- 1発言は120文字以内を目安にする。",
-    "- 各発言のanswerRefsに、その発言の根拠にした質問コード(q01〜q20の形式)を1つ以上入れる。",
+    "- 各発言のanswerRefsに、その発言の根拠にした質問コード(qに数字が続く形式)を1つ以上入れる。",
     "- 会話全体で、異なる質問を3つ以上反映すること。",
     "",
     "## 相性評価の要件",
@@ -238,10 +239,13 @@ export class GeminiAiProvider implements AiProvider {
   }
 
   async generateMatch(input: MatchInput): Promise<MatchOutput> {
+    // 実際にAIへ渡した回答コードの集合。answerRefsがこれ以外を指していれば契約違反として
+    // 扱う(開示同意の無い回答が「会話で触れられたかのように」見えてしまうのを防ぐ)。
+    const disclosedAnswerCodes = new Set(input.answers.map(({ questionCode }) => questionCode));
     return this.generateValidated(
       buildMatchPrompt(input),
       matchResponseSchema,
-      (value) => matchOutputSchema.parse(value),
+      (value) => assertAnswerRefsAreDisclosed(matchOutputSchema.parse(value), disclosedAnswerCodes),
     );
   }
 

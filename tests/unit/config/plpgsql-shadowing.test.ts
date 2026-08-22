@@ -57,3 +57,70 @@ describe("plpgsqlの変数名が列名と衝突しない", () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * `on conflict (列名, ...)` の対象列が、同じ関数内で宣言された変数名と同じだと危険。
+ * `#variable_conflict use_variable` を宣言している場合は、対象列が変数として解釈され
+ * 「ON CONFLICTの指定に一致する一意制約が無い」42P10 で失敗する
+ * (実際に start_match_run() がこれで常に失敗していた。宣言済みの変数
+ * `owner_id` と `on conflict (owner_id, candidate_id)` が衝突していた)。
+ * 宣言していない場合も、ON CONFLICTの対象列はテーブル別名で修飾できないため
+ * 曖昧さを列側の書き方で回避できない。
+ *
+ * 上のテスト(列名と同じ変数がありuse_variableも無い場合を検出)とは独立に、
+ * `#variable_conflict use_variable` の有無に関わらず on conflict 対象列との
+ * 衝突を検出する。回避手段は変数名を列名(=on conflictの対象列名)と
+ * 重ならないものにすることだけ。
+ *
+ * `create or replace function` はDB上では後続のマイグレーションが前の定義を
+ * 完全に上書きする。本番へ適用済みのファイルは書き換えない運用
+ * (このリポジトリの方針)のため、過去のファイルには「後から上書きされて
+ * 実害の無くなった」定義がそのまま残り続ける。ファイル単位で見ると誤検知に
+ * なるため、関数名ごとにマイグレーション適用順で最後に有効な定義だけを
+ * 抽出して検証する(=実際にDBへ反映される挙動と同じ単位で見る)。
+ */
+describe("on conflictの対象列が同じ関数内の変数名と衝突しない", () => {
+  it("マイグレーション適用後の最終的な関数定義でon conflictの対象列が宣言済み変数と衝突しない", () => {
+    const finalDefinitions = new Map<string, { file: string; source: string }>();
+
+    for (const file of [...files].sort()) {
+      const sql = readFileSync(resolve(migrationsDir, file), "utf8");
+      for (const match of sql.matchAll(
+        /create (?:or replace )?function public\.([a-z_]+)\s*\([^)]*\)[\s\S]*?\$\$([\s\S]*?)\$\$/gi,
+      )) {
+        const functionName = match[1]!;
+        const source = match[2]!;
+        // 同一ファイル内でも複数回定義されうる(このリポジトリでは無いが念のため)。
+        // 常に最後に見つかった定義で上書きする。
+        finalDefinitions.set(functionName, { file, source });
+      }
+    }
+
+    const violations: string[] = [];
+    for (const [functionName, { file, source }] of finalDefinitions) {
+      const declared = new Set<string>();
+      for (const block of source.matchAll(/\bdeclare\b([\s\S]*?)\bbegin\b/g)) {
+        for (const variable of block[1]!.matchAll(
+          /(?:^|\s)([a-z_]+)\s+(?:uuid|text|integer|smallint|boolean|jsonb|timestamptz|public\.)/g,
+        )) {
+          declared.add(variable[1]!);
+        }
+      }
+      if (declared.size === 0) continue;
+
+      for (const conflict of source.matchAll(/on conflict\s*\(([^)]*)\)/gi)) {
+        for (const rawColumn of conflict[1]!.split(",")) {
+          const column = rawColumn.trim();
+          if (declared.has(column)) {
+            violations.push(`${functionName} (${file}): ${column}`);
+          }
+        }
+      }
+    }
+
+    expect(
+      violations,
+      `on conflictの対象列と同じ名前の変数が宣言されている(#variable_conflict use_variableの有無に関わらず危険): ${violations.join(", ")}`,
+    ).toEqual([]);
+  });
+});

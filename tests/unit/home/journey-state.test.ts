@@ -1,66 +1,120 @@
 import { describe, expect, it } from "vitest";
 
+import { TOTAL_QUESTIONS } from "@/features/interview/domain";
 import { deriveJourneyState } from "@/features/matching/server/journey-state";
 
 describe("deriveJourneyState", () => {
   it("未完了のインタビューでは次の未回答質問への継続を主操作にする", () => {
-    const result = deriveJourneyState({ answeredCount: 7, match: null });
+    const result = deriveJourneyState({ answeredCount: 7, matches: [] });
     expect(result.state).toBe("interview");
     expect(result.primaryAction.href).toBe("/interview/8");
   });
 
-  it("20問完了しマッチ未開始なら開始への導線を主操作にする", () => {
-    const result = deriveJourneyState({ answeredCount: 20, match: null });
+  it("全問完了しマッチ未開始なら開始への導線を主操作にする", () => {
+    const result = deriveJourneyState({ answeredCount: TOTAL_QUESTIONS, matches: [] });
     expect(result.state).toBe("ready_to_match");
     expect(result.primaryAction.href).toBe("/matching");
   });
 
-  it("処理中はmatching状態としレポート導線を主操作にしない", () => {
-    const result = deriveJourneyState({ answeredCount: 20, match: { status: "processing" } });
+  it("1件でも処理中ならmatching状態としレポート導線を主操作にしない", () => {
+    const result = deriveJourneyState({
+      answeredCount: TOTAL_QUESTIONS,
+      matches: [
+        { matchRunId: "m1", status: "completed", decision: null },
+        { matchRunId: "m2", status: "processing", decision: null },
+        { matchRunId: "m3", status: "queued", decision: null },
+      ],
+    });
     expect(result.state).toBe("matching");
-    expect(result.primaryAction.href).not.toBe("/report");
+    expect(result.primaryAction.href).toBe("/matching");
   });
 
-  it("失敗時は再試行を主操作にする", () => {
-    const result = deriveJourneyState({ answeredCount: 20, match: { status: "failed" } });
+  it("全滅した場合だけ失敗状態として再試行を主操作にする", () => {
+    const result = deriveJourneyState({
+      answeredCount: TOTAL_QUESTIONS,
+      matches: [
+        { matchRunId: "m1", status: "failed", decision: null },
+        { matchRunId: "m2", status: "failed", decision: null },
+        { matchRunId: "m3", status: "failed", decision: null },
+      ],
+    });
     expect(result.state).toBe("match_failed");
     expect(result.primaryAction.href).toBe("/matching");
   });
 
-  it("完了かつ未決定ならレポート閲覧を主操作にする", () => {
-    const result = deriveJourneyState({ answeredCount: 20, match: { status: "completed" } });
-    expect(result.state).toBe("report_ready");
-    expect(result.primaryAction.href).toBe("/report");
-  });
-
-  it("matchRunIdがあればレポート導線にクエリを付与する", () => {
+  it("一部が失敗しても完了が1件でもあればmatch_failedにしない", () => {
     const result = deriveJourneyState({
-      answeredCount: 20,
-      match: { status: "completed", matchRunId: "m1" },
+      answeredCount: TOTAL_QUESTIONS,
+      matches: [
+        { matchRunId: "m1", status: "completed", decision: null },
+        { matchRunId: "m2", status: "failed", decision: null },
+        { matchRunId: "m3", status: "failed", decision: null },
+      ],
     });
-    expect(result.primaryAction.href).toBe("/report?matchRunId=m1");
+    expect(result.state).not.toBe("match_failed");
   });
 
-  it("承諾済みなら開示情報の閲覧を主操作にする", () => {
+  it("完了が1件以上あり未決定ならマッチ結果一覧を主操作にする", () => {
     const result = deriveJourneyState({
-      answeredCount: 20,
-      match: { status: "completed", matchRunId: "m1", decision: "accept" },
+      answeredCount: TOTAL_QUESTIONS,
+      matches: [
+        { matchRunId: "m1", status: "completed", decision: null },
+        { matchRunId: "m2", status: "completed", decision: null },
+        { matchRunId: "m3", status: "completed", decision: null },
+      ],
+    });
+    expect(result.state).toBe("report_ready");
+    expect(result.primaryAction.href).toBe("/matches");
+  });
+
+  it("いずれか1件を承諾済みなら開示情報の閲覧を主操作にする", () => {
+    const result = deriveJourneyState({
+      answeredCount: TOTAL_QUESTIONS,
+      matches: [
+        { matchRunId: "m1", status: "completed", decision: "decline" },
+        { matchRunId: "m2", status: "completed", decision: "accept" },
+        { matchRunId: "m3", status: "completed", decision: null },
+      ],
     });
     expect(result.state).toBe("accepted");
     expect(result.primaryAction.href).toBe("/reveal");
   });
 
-  it("辞退済みなら結果画面への導線を主操作にする", () => {
+  it("完了した全件を辞退済みなら結果画面への導線を主操作にする", () => {
     const result = deriveJourneyState({
-      answeredCount: 20,
-      match: { status: "completed", matchRunId: "m1", decision: "decline" },
+      answeredCount: TOTAL_QUESTIONS,
+      matches: [
+        { matchRunId: "m1", status: "completed", decision: "decline" },
+        { matchRunId: "m2", status: "completed", decision: "decline" },
+      ],
     });
     expect(result.state).toBe("declined");
     expect(result.primaryAction.href).toBe("/declined");
   });
 
+  it("完了した候補が1人だけ(3人未満)でも同じ導出ロジックが適用される", () => {
+    const result = deriveJourneyState({
+      answeredCount: TOTAL_QUESTIONS,
+      matches: [{ matchRunId: "m1", status: "completed", decision: null }],
+    });
+    expect(result.state).toBe("report_ready");
+  });
+
   it("allowedPathsには常にホームとマイページを含む", () => {
-    const result = deriveJourneyState({ answeredCount: 0, match: null });
+    const result = deriveJourneyState({ answeredCount: 0, matches: [] });
     expect(result.allowedPaths).toEqual(expect.arrayContaining(["/", "/mypage"]));
+  });
+
+  it("完了済みrunのレポートパスをallowedPathsに含める", () => {
+    const result = deriveJourneyState({
+      answeredCount: TOTAL_QUESTIONS,
+      matches: [
+        { matchRunId: "m1", status: "completed", decision: null },
+        { matchRunId: "m2", status: "completed", decision: null },
+      ],
+    });
+    expect(result.allowedPaths).toEqual(expect.arrayContaining([
+      "/matches", "/report?matchRunId=m1", "/report?matchRunId=m2",
+    ]));
   });
 });

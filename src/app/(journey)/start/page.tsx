@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell/app-shell";
 import styles from "@/components/interview/interview.module.css";
 import { startAnonymousJourney } from "@/features/identity/server/actions";
+import { TOTAL_QUESTIONS } from "@/features/interview/domain";
 
 type StartPageProps = {
   searchParams: Promise<{ error?: string | string[] }>;
@@ -23,7 +24,7 @@ export default async function StartPage({ searchParams }: StartPageProps) {
     <AppShell>
       <section className={styles.start}>
         <h1 className={styles.title}>AIインタビュー</h1>
-        <p className={styles.copy}>20問の質問から、あなたらしさをアバターに伝えます。</p>
+        <p className={styles.copy}>{TOTAL_QUESTIONS}問の質問から、あなたらしさをアバターに伝えます。</p>
         {query.error ? (
           <p className={styles.error} role="alert">
             インタビューを開始できませんでした。時間をおいて、もう一度お試しください。

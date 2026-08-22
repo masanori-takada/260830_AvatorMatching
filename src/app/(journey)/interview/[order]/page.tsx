@@ -5,7 +5,7 @@ import styles from "@/components/interview/interview.module.css";
 import { Progress } from "@/components/interview/progress";
 import { QuestionCard } from "@/components/interview/question-card";
 import { saveInterviewAnswer } from "@/features/interview/server/actions";
-import { getAllowedInterviewOrder } from "@/features/interview/domain";
+import { getAllowedInterviewOrder, TOTAL_QUESTIONS } from "@/features/interview/domain";
 import { getInterviewState } from "@/features/interview/server/queries";
 import { requireUser } from "@/features/identity/server/session";
 
@@ -21,7 +21,7 @@ export default async function InterviewPage({ params, searchParams }: InterviewP
     requireUser(),
   ]);
   const order = Number(rawOrder);
-  if (!Number.isInteger(order) || order < 1 || order > 20) {
+  if (!Number.isInteger(order) || order < 1 || order > TOTAL_QUESTIONS) {
     notFound();
   }
 

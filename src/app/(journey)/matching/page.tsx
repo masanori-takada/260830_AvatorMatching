@@ -7,7 +7,7 @@ export default async function MatchingPage() {
   return (
     <AppShell activeTab="home" showNavigation>
       {result.ok
-        ? <MatchingProgress initialStatus={result.data.status} matchRunId={result.data.matchRunId} />
+        ? <MatchingProgress matches={result.data.matches} />
         : <p role="alert">{result.error.message}</p>}
     </AppShell>
   );

@@ -7,5 +7,13 @@
 .copy { margin: var(--space-4) 0 0; }
 .note { color: var(--color-subtext); font-size: 12px; margin: 0; }
 .primary { align-items: center; background: var(--color-wine); border: 0; border-radius: var(--radius-button); color: white; cursor: pointer; display: flex; font-weight: 700; justify-content: center; min-height: 48px; padding: var(--space-10) var(--space-16); text-decoration: none; width: 100%; }
+.secondary { align-items: center; background: transparent; border: 1px solid var(--color-wine); border-radius: var(--radius-button); color: var(--color-wine); cursor: pointer; display: flex; font-weight: 700; justify-content: center; min-height: 44px; padding: var(--space-10) var(--space-16); width: 100%; }
+.progressLabel { font-size: 13px; font-weight: 700; margin: 0; }
+.runList { display: flex; flex-direction: column; gap: var(--space-8); list-style: none; margin: 0; padding: 0; }
+.runItem { align-items: center; background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-button); display: flex; gap: var(--space-10); padding: var(--space-10) var(--space-12); }
+.runItem[data-status="completed"] { border-color: var(--color-pink); }
+.runItem[data-status="failed"], .runItem[data-status="timed_out"] { border-color: var(--color-danger); }
+.runMark { align-items: center; background: var(--color-pink-soft); border-radius: 50%; color: var(--color-wine); display: flex; flex: 0 0 26px; font-size: 12px; font-weight: 800; height: 26px; justify-content: center; }
+.runItem[data-status="failed"] .runMark, .runItem[data-status="timed_out"] .runMark { background: var(--color-danger); color: white; }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgb(163 43 85 / 20%); } 50% { box-shadow: 0 0 0 10px rgb(163 43 85 / 0%); } }
 @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }

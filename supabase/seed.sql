@@ -1,40 +1,14 @@
 -- 固定20問は環境差分を防ぐため、202608130002_interview.sqlで参照データとして投入する。
 
--- 候補者の匿名面には、本人特定につながる属性を含めない。
-insert into public.demo_candidates (id, avatar_alias, conversation_profile, active)
-values (
-  '00000000-0000-4000-8000-000000000001',
-  'ルナ',
-  $profile$
-  {
-    "interests": ["読書", "家庭料理", "美術館めぐり"],
-    "conversation_style": "穏やかに相手の話を聞き、考えてから言葉を選ぶ",
-    "values": ["誠実な対話", "無理のない生活リズム"],
-    "weekend_style": "本を読んだり、新しい料理を試したりして過ごす"
-  }
-  $profile$::jsonb,
-  true
-)
-on conflict (id) do update
-set avatar_alias = excluded.avatar_alias,
-    conversation_profile = excluded.conversation_profile,
-    active = excluded.active
-where (demo_candidates.avatar_alias, demo_candidates.conversation_profile, demo_candidates.active)
-  is distinct from (excluded.avatar_alias, excluded.conversation_profile, excluded.active);
-
--- 以下の人物・団体・部署・経歴はすべて本デモ用の完全な架空情報。
-insert into public.candidate_reveals (candidate_id, full_name, company, department, bio)
-values (
-  '00000000-0000-4000-8000-000000000001',
-  '星乃 ルナ（完全架空）',
-  'ルミナス架空企画株式会社（完全架空）',
-  '未来対話デザイン室（完全架空）',
-  'この人物、氏名、勤務先、部署、経歴は本デモ用に作成した完全な架空情報です。実在の人物・団体とは関係ありません。休日は読書や家庭料理を楽しみ、穏やかな対話を大切にするという設定です。'
-)
-on conflict (candidate_id) do update
-set full_name = excluded.full_name,
-    company = excluded.company,
-    department = excluded.department,
-    bio = excluded.bio
-where (candidate_reveals.full_name, candidate_reveals.company, candidate_reveals.department, candidate_reveals.bio)
-  is distinct from (excluded.full_name, excluded.company, excluded.department, excluded.bio);
+-- 候補者3人(ルナ・陽翔・紬)とその開示情報(candidate_reveals)は、以前このファイルに
+-- 書かれていたが、`supabase db push`はseed.sqlを実行しないため本番DBに反映されない
+-- 不具合があった(候補者は「デモに必ず必要な参照データ」であり、seedではなくマイグレーションで
+-- 投入すべきデータだった)。
+--
+-- そのため投入先を supabase/migrations/202608220003_fix_start_match_run.sql へ一本化した。
+-- このファイル(seed.sql)は `supabase db reset` 等でも先にマイグレーションが適用されるため、
+-- ローカル開発でも同じ3人が同じ場所からべき等に投入される。データを2箇所で持って
+-- 食い違わせないよう、ここには候補者データを置かない。
+--
+-- 候補者データを変更する場合は 202608220003_fix_start_match_run.sql を編集すること
+-- (本番へ適用済みの202608220001/202608220002は書き換えない、という方針に合わせている)。

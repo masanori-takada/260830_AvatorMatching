@@ -1,7 +1,8 @@
 import { expect, test, type Page } from "./support/access-gate";
 
 import { createAvatarSummary } from "./support/avatar-summary";
-import { answerInterviewRange, completeInterview } from "./support/interview";
+import { answerInterviewRange, TOTAL_INTERVIEW_QUESTIONS } from "./support/interview";
+import { reachFirstUndecidedReport } from "./support/matching";
 
 const BUDGET_MS = 2_000;
 const SAMPLES = 3;
@@ -74,7 +75,7 @@ test.describe("performance (2s budget, SC-010 fidelity gate companion)", () => {
       expect(page.getByRole("heading", { name: "よくある質問" })).toBeVisible());
 
     await page.goto("/interview/4");
-    await answerInterviewRange(page, 4, 20);
+    await answerInterviewRange(page, 4, TOTAL_INTERVIEW_QUESTIONS);
     await expect(page).toHaveURL(/\/interview\/complete$/);
 
     await expectWithinBudget(page, "/interview/complete", "/interview/complete", () =>
@@ -82,12 +83,16 @@ test.describe("performance (2s budget, SC-010 fidelity gate companion)", () => {
 
     await createAvatarSummary(page);
     await page.goto("/matching");
-    await expect(page.getByRole("link", { name: "相性レポートを見る" })).toBeVisible({ timeout: 30_000 });
+    // /matchingの完了リンクは候補数を含む「マッチ結果を見る（N人）」表記のため正規表現で判定する
+    // (matching-progress.tsx)。個別の相性レポートへは、まず/matchesの候補一覧を経由する。
+    await expect(page.getByRole("link", { name: /マッチ結果を見る/u })).toBeVisible({ timeout: 30_000 });
 
     await expectWithinBudget(page, "/matching(完了)", "/matching", () =>
-      expect(page.getByRole("link", { name: "相性レポートを見る" })).toBeVisible({ timeout: 30_000 }));
+      expect(page.getByRole("link", { name: /マッチ結果を見る/u })).toBeVisible({ timeout: 30_000 }));
 
-    await page.getByRole("link", { name: "相性レポートを見る" }).click();
+    await page.getByRole("link", { name: /マッチ結果を見る/u }).click();
+    await expect(page).toHaveURL(/\/matches$/);
+    await page.getByRole("link", { name: /相性 \d+%/u }).first().click();
     await expect(page.getByRole("meter")).toHaveCount(5);
     const reportUrl = page.url();
 
@@ -108,11 +113,7 @@ test.describe("performance (2s budget, SC-010 fidelity gate companion)", () => {
   test("辞退後の/declinedの表示が2秒以内(中央値)", async ({ page }) => {
     test.setTimeout(120_000);
 
-    await completeInterview(page);
-    await createAvatarSummary(page);
-    await page.goto("/matching");
-    await expect(page.getByRole("link", { name: "相性レポートを見る" })).toBeVisible({ timeout: 30_000 });
-    await page.getByRole("link", { name: "相性レポートを見る" }).click();
+    await reachFirstUndecidedReport(page);
     await page.getByRole("button", { name: "辞退する" }).click();
     await page.getByRole("button", { name: "辞退を確定する" }).click();
     await expect(page).toHaveURL(/\/declined$/);
