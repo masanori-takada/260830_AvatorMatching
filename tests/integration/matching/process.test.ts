@@ -86,4 +86,32 @@ describe("processOwnedMatch", () => {
       p_match_run_id: "11111111-1111-4111-8111-111111111111", p_error_code: "INVALID_OUTPUT",
     });
   });
+
+  it("Supabaseのplain objectエラーから許可済み識別子だけを記録する", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const secretMessage = "INVALID_OUTPUT: 回答本文や秘密情報を含む可能性がある詳細";
+    rpc.mockReset()
+      .mockResolvedValueOnce({ data: "processing", error: null })
+      .mockResolvedValueOnce({ data: null, error: { code: "P0001", message: secretMessage } })
+      .mockResolvedValueOnce({ data: null, error: { code: "secret-database-detail" } });
+
+    await expect(processOwnedMatch("11111111-1111-4111-8111-111111111111"))
+      .rejects.toThrow("INVALID_OUTPUT");
+
+    expect(rpc).toHaveBeenLastCalledWith("fail_match_run", {
+      p_match_run_id: "11111111-1111-4111-8111-111111111111", p_error_code: "INVALID_OUTPUT",
+    });
+    const loggedText = consoleError.mock.calls
+      .map(([entry]) => entry as string)
+      .find((entry) => entry.includes('"event":"match_processing_failed"'));
+    expect(loggedText).toBeDefined();
+    expect(loggedText).not.toContain(secretMessage);
+    expect(loggedText).not.toContain("secret-database-detail");
+    expect(JSON.parse(loggedText as string)).toMatchObject({
+      errorCode: "INVALID_OUTPUT",
+      errorName: "SupabaseError",
+      dbErrorId: "INVALID_OUTPUT",
+      dbErrorCode: "P0001",
+    });
+  });
 });

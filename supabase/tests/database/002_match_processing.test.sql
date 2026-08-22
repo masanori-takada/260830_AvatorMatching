@@ -1,5 +1,5 @@
 begin;
-select plan(31);
+select plan(32);
 
 select tests.create_supabase_user('match_owner');
 select tests.create_supabase_user('match_other');
@@ -42,8 +42,10 @@ returns jsonb language sql stable as $$
       'turnIndex', n,
       'speaker', case when n % 2 = 1 then 'user_avatar' else 'candidate_avatar' end,
       'body', '安全な発言' || n,
-      'answerRefs', jsonb_build_array('q0' || ((n - 1) % 3 + 1))
-    ) order by n) from generate_series(1, 8) n),
+      'answerRefs', jsonb_build_array(
+        case when n = 36 then 'q42' else 'q0' || ((n - 1) % 3 + 1) end
+      )
+    ) order by n) from generate_series(1, 36) n),
     'report', jsonb_build_object(
       'overallScore', 75, 'summary', '安全な相性要約', 'caution', '違いは対話で確認します。',
       'dimensions', jsonb_build_array(
@@ -104,6 +106,8 @@ select is((select count(*) from public.conversation_messages where match_run_id 
 
 select public.complete_match_run(:'run_id', pg_temp.valid_match_payload());
 select is((select status from public.match_runs where id = :'run_id'), 'completed'::public.match_status, 'completeでcompletedになる');
+select is((select count(*) from public.conversation_messages where match_run_id = :'run_id'), 36::bigint,
+  'complete成功時に36発言を保存する');
 select is((select count(*) from public.compatibility_reports where match_run_id = :'run_id'), 1::bigint, 'reportは1件だけ確定する');
 select is((select count(*) from public.compatibility_dimensions where owner_id = tests.get_supabase_uid('match_owner')), 5::bigint, '5軸だけ確定する');
 select is((select count(*) from public.notifications where match_run_id = :'run_id'), 2::bigint, '通知2件を確定する');

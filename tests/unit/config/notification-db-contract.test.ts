@@ -10,7 +10,7 @@ describe("notification DB契約", () => {
     expect(migration).toMatch(/revoke all on function public\.mark_notification_read\(uuid\) from public, anon/i);
     expect(migration).toMatch(/grant execute on function public\.mark_notification_read\(uuid\) to authenticated/i);
     const pgTap = readFileSync(resolve(process.cwd(), "supabase/tests/database/002_match_processing.test.sql"), "utf8");
-    expect(pgTap).toMatch(/select plan\(31\)/i);
+    expect(pgTap).toMatch(/select plan\(32\)/i);
     expect(pgTap).toContain("anonは既読RPCを実行できない");
     expect(pgTap).toContain("他ownerは通知を既読にできない");
     expect(pgTap).toContain("既読再実行は同じ時刻を返す");

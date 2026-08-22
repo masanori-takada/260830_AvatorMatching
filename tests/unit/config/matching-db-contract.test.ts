@@ -1,9 +1,22 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const migrationPath = resolve(process.cwd(), "supabase/migrations/202608130003_matching.sql");
 const pgTapPath = resolve(process.cwd(), "supabase/tests/database/002_match_processing.test.sql");
+
+function readLatestCompleteMatchRunMigration(): string {
+  const migrationsDirectory = resolve(process.cwd(), "supabase/migrations");
+  const latestMigrationName = readdirSync(migrationsDirectory)
+    .filter((name) => name.endsWith(".sql"))
+    .sort()
+    .reverse()
+    .find((name) => readFileSync(resolve(migrationsDirectory, name), "utf8")
+      .match(/create or replace function public\.complete_match_run\s*\(/i));
+
+  if (!latestMigrationName) throw new Error("complete_match_runのマイグレーションが見つかりません。");
+  return readFileSync(resolve(migrationsDirectory, latestMigrationName), "utf8");
+}
 
 describe("matching DB契約", () => {
   it("5テーブル・enum・owner RLS・最小権限・Realtimeを定義する", () => {
@@ -47,6 +60,26 @@ describe("matching DB契約", () => {
     expect(sql).toMatch(/interview_answers[\s\S]*answer_refs/i);
     expect(sql).toMatch(/insert into public\.conversation_messages[\s\S]*insert into public\.compatibility_reports[\s\S]*insert into public\.compatibility_dimensions[\s\S]*insert into public\.notifications[\s\S]*status = 'completed'/i);
     expect(sql).toMatch(/where id = p_match_run_id and match_runs\.owner_id = owner_id for update/i);
+  });
+
+  it("最新の補正マイグレーションがcomplete_match_runのmessages上限を36にする", () => {
+    const sql = readLatestCompleteMatchRunMigration();
+
+    expect(sql).toMatch(/jsonb_array_length\(p_payload -> 'messages'\) not between 8 and 36/i);
+  });
+
+  it("最新のcomplete_match_runがq01からq42まで許可しq43以上を拒否する", () => {
+    const sql = readLatestCompleteMatchRunMigration();
+    const answerRefPatternSource = sql.match(/where value !~ '([^']+)'/i)?.[1];
+
+    expect(answerRefPatternSource).toBeDefined();
+    const answerRefPattern = new RegExp(answerRefPatternSource as string);
+    for (let order = 1; order <= 42; order += 1) {
+      expect(answerRefPattern.test(`q${String(order).padStart(2, "0")}`)).toBe(true);
+    }
+    for (const invalidCode of ["q43", "q44", "q99", "q100", "q00", "q1"]) {
+      expect(answerRefPattern.test(invalidCode)).toBe(false);
+    }
   });
 
   it("pgTAPが所有権・stale profile・必須refs・再試行・冪等完了を検証する", () => {

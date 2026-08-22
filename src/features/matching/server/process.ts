@@ -5,9 +5,38 @@ import { getOwnedMatchInput } from "@/features/matching/server/queries";
 import { extractAiDiagnostics } from "@/lib/ai/generation";
 import { getAiProvider } from "@/lib/ai/provider";
 import { matchOutputSchema } from "@/lib/ai/schemas";
-import { identifyDbErrorCode } from "@/lib/db-error-codes";
+import { identifyDbErrorCode, UNKNOWN_DB_ERROR_CODE } from "@/lib/db-error-codes";
 import { logError } from "@/lib/logger";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+
+const SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/;
+
+function readStringProperty(value: unknown, key: "code" | "message"): string | undefined {
+  if (value === null || typeof value !== "object") return undefined;
+  const property = Reflect.get(value, key);
+  return typeof property === "string" ? property : undefined;
+}
+
+function identifySqlState(code: string | undefined): string | undefined {
+  return code && SQLSTATE_PATTERN.test(code) ? code : undefined;
+}
+
+function extractSafeDbDiagnostics(error: unknown) {
+  const message = error instanceof Error ? error.message : readStringProperty(error, "message");
+  const rawCode = readStringProperty(error, "code");
+  const messageErrorId = identifyDbErrorCode(message);
+  const codeErrorId = identifyDbErrorCode(rawCode);
+  const dbErrorId = messageErrorId !== UNKNOWN_DB_ERROR_CODE ? messageErrorId : codeErrorId;
+  let errorName = "UnknownError";
+  if (error instanceof Error) errorName = error.name;
+  else if (message || rawCode) errorName = "SupabaseError";
+
+  return {
+    dbErrorId,
+    dbErrorCode: identifySqlState(rawCode),
+    errorName,
+  };
+}
 
 export async function processOwnedMatch(matchRunId: string): Promise<"completed"> {
   const { userId } = await requireUser();
@@ -33,7 +62,7 @@ export async function processOwnedMatch(matchRunId: string): Promise<"completed"
     if (completeError) throw completeError;
     return "completed";
   } catch (error) {
-    const dbErrorId = error instanceof Error ? identifyDbErrorCode(error.message) : undefined;
+    const { dbErrorId, dbErrorCode, errorName } = extractSafeDbDiagnostics(error);
     const isInvalidOutput = error instanceof ZodError || dbErrorId === "INVALID_OUTPUT";
     const errorCode = isInvalidOutput ? "INVALID_OUTPUT" : "PROVIDER_ERROR";
     const { error: failError } = await client.rpc("fail_match_run", {
@@ -47,9 +76,10 @@ export async function processOwnedMatch(matchRunId: string): Promise<"completed"
     logError("match_processing_failed", {
       matchRunId,
       errorCode,
-      errorName: error instanceof Error ? error.name : "UnknownError",
+      errorName,
       dbErrorId,
-      failErrorCode: failError?.code,
+      dbErrorCode,
+      failErrorCode: identifySqlState(readStringProperty(failError, "code")),
       ...extractAiDiagnostics(error, "unknown"),
     });
     if (isInvalidOutput) throw new Error("INVALID_OUTPUT", { cause: error });
