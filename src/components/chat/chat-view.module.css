@@ -1,0 +1,17 @@
+.chat { display: flex; flex-direction: column; gap: var(--space-14); min-height: 100%; }
+.header { align-items: center; display: flex; gap: var(--space-12); }
+.header h1 { font-size: 22px; margin: 0; }
+.aiNotice { color: var(--color-subtext); font-size: 11px; margin: var(--space-2) 0 0; }
+.messages { display: flex; flex: 1 1 auto; flex-direction: column; gap: var(--space-8); list-style: none; margin: 0; min-height: 250px; padding: 0; }
+.candidateMessage, .ownerMessage { border-radius: var(--space-16); max-width: 86%; padding: var(--space-8) var(--space-12); }
+.candidateMessage { align-self: flex-start; background: var(--color-pink-soft); border-bottom-left-radius: var(--space-4); }
+.ownerMessage { align-self: flex-end; background: var(--color-wine); border-bottom-right-radius: var(--space-4); color: var(--color-card); }
+.sender { font-size: 11px; font-weight: 700; margin: 0; opacity: .75; }
+.body { margin: var(--space-2) 0 0; white-space: pre-wrap; word-break: break-word; }
+.composer { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); display: grid; gap: var(--space-8); padding: var(--space-12); }
+.composer label { color: var(--color-subtext); font-size: 12px; }
+.composer textarea { border: 1px solid var(--color-border); border-radius: var(--radius-button); min-height: 72px; padding: var(--space-8); resize: vertical; }
+.composer p { color: var(--color-danger); margin: 0; }
+.composer button { background: var(--color-wine); border: 1px solid var(--color-wine); border-radius: var(--radius-pill); color: var(--color-card); cursor: pointer; min-height: 42px; }
+.composer button:disabled { cursor: wait; opacity: .65; }
+

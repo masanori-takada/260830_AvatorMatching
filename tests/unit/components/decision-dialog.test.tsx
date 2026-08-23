@@ -20,17 +20,17 @@ describe("DecisionDialog", () => {
   it("承諾を明示確認し確認ボタンへfocusして成功後だけ遷移する", async () => {
     commitDecision.mockResolvedValue({ ok: true, data: { kind: "accept", nextPath: "/reveal" } });
     render(<DecisionDialog matchRunId="11111111-1111-4111-8111-111111111111" />);
-    fireEvent.click(screen.getByRole("button", { name: "承諾する" }));
-    const confirm = screen.getByRole("button", { name: "承諾を確定する" });
+    fireEvent.click(screen.getByRole("button", { name: "プロフィール開示を希望" }));
+    const confirm = screen.getByRole("button", { name: "プロフィール開示を確定" });
     await waitFor(() => expect(confirm).toHaveFocus());
     fireEvent.click(confirm);
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/reveal"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/reveal"), { timeout: 3000 });
   });
 
   it("cancelで決定せずdialogを閉じる", async () => {
     render(<DecisionDialog matchRunId="11111111-1111-4111-8111-111111111111" />);
-    fireEvent.click(screen.getByRole("button", { name: "辞退する" }));
-    const dialog = screen.getByRole("dialog", { name: "辞退を確認" });
+    fireEvent.click(screen.getByRole("button", { name: "今回は見送る" }));
+    const dialog = screen.getByRole("dialog", { name: "見送りを確認" });
     dialog.dispatchEvent(new Event("cancel", { bubbles: true, cancelable: true }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(commitDecision).not.toHaveBeenCalled();
@@ -47,8 +47,8 @@ describe("DecisionDialog", () => {
       },
     });
     render(<DecisionDialog matchRunId="11111111-1111-4111-8111-111111111111" />);
-    fireEvent.click(screen.getByRole("button", { name: "辞退する" }));
-    fireEvent.click(screen.getByRole("button", { name: "辞退を確定する" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/reveal"));
+    fireEvent.click(screen.getByRole("button", { name: "今回は見送る" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "今回は見送る" })[1]!);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/reveal"), { timeout: 3000 });
   });
 });

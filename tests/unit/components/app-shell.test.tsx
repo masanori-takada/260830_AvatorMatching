@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app-shell/app-shell";
 describe("AppShell", () => {
   afterEach(cleanup);
 
-  it("登録後の4タブと現在タブを示す", () => {
+  it("登録後の5タブと現在タブを示す", () => {
     render(
       <AppShell activeTab="home" showNavigation>
         本文
@@ -20,7 +20,8 @@ describe("AppShell", () => {
       "aria-current",
       "page",
     );
-    expect(screen.getAllByRole("link")).toHaveLength(4);
+    expect(screen.getAllByRole("link")).toHaveLength(5);
+    expect(screen.getByRole("link", { name: "チャット" })).toHaveAttribute("href", "/chat");
   });
 
   it("ナビゲーションを省略しても本文をmainに表示する", () => {

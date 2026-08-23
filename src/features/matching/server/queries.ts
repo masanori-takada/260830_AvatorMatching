@@ -6,13 +6,13 @@ import {
   type SensitiveGroup,
 } from "@/features/interview/domain";
 import type { MatchInput } from "@/lib/ai/types";
+import { anonymizePreConsentValue } from "@/lib/ai/pre-consent-identity";
 import type { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type ServerClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
 
 type AnswerRow = { question_code: `q${string}`; answer: string; revision: number };
 type CandidateRow = {
-  avatar_alias: string;
   conversation_profile: Record<string, unknown>;
   disclosure_consent_groups: string[];
 };
@@ -43,7 +43,7 @@ export async function getOwnedMatchInput(
   if (answersError || !answers || answers.length !== TOTAL_QUESTIONS) throw answersError ?? new Error("INTERVIEW_INCOMPLETE");
 
   const { data: candidate, error: candidateError } = await client.from("demo_candidates")
-    .select("avatar_alias, conversation_profile, disclosure_consent_groups")
+    .select("conversation_profile, disclosure_consent_groups")
     .eq("id", run.candidate_id).eq("active", true).single();
   if (candidateError || !candidate) throw candidateError ?? new Error("CANDIDATE_NOT_FOUND");
 
@@ -66,8 +66,9 @@ export async function getOwnedMatchInput(
   return {
     answers: disclosableAnswers,
     candidate: {
-      avatarAlias: typedCandidate.avatar_alias,
-      conversationProfile: typedCandidate.conversation_profile,
+      conversationProfile: anonymizePreConsentValue(
+        typedCandidate.conversation_profile,
+      ) as Record<string, unknown>,
     },
   };
 }

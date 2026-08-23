@@ -29,6 +29,8 @@ const USER_DATA_TABLES = new Set([
   "avatar_profiles",
   "decisions",
   "notifications",
+  "match_connections",
+  "chat_messages",
 ]);
 
 type FkDefinition = {

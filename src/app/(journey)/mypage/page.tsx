@@ -19,7 +19,7 @@ export default async function MyPage() {
 
       <section className={styles.summaryCard}>
         <p className={styles.category}>現在のステップ</p>
-        <p className={styles.copy}>{describeJourneyState(journey.state)}</p>
+        <p className={styles.copy}>{describeJourneyState(journey.state, journey.connectionState)}</p>
       </section>
 
       {interviewState.locked ? (

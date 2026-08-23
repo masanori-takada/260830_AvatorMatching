@@ -1,4 +1,5 @@
 import { TOTAL_QUESTIONS } from "@/features/interview/domain";
+import type { ConnectionState } from "@/features/connection/server/queries";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type MatchRunStatus = "queued" | "processing" | "completed" | "failed";
@@ -9,6 +10,7 @@ export type MatchRunSnapshot = {
   matchRunId: string;
   status: MatchRunStatus;
   decision: "accept" | "decline" | null;
+  connectionState?: ConnectionState | null;
 };
 
 export type JourneySnapshot = {
@@ -33,6 +35,7 @@ export type DerivedJourney = {
   state: JourneyStateName;
   primaryAction: PrimaryAction;
   allowedPaths: string[];
+  connectionState?: ConnectionState | null;
 };
 
 // どの状態でも到達できる共通画面。ホーム、マイページ、お知らせ、設定、プライバシー、FAQ。
@@ -85,17 +88,28 @@ export function deriveJourneyState(snapshot: JourneySnapshot): DerivedJourney {
   }
 
   const reportPaths = completed.map((run) => reportHrefFor(run.matchRunId));
-  const accepted = completed.find((run) => run.decision === "accept");
+  const accepted = completed.find((run) => (
+    run.connectionState !== undefined
+      ? run.connectionState === "profile_revealed"
+        || run.connectionState === "contact_pending"
+        || run.connectionState === "connected"
+      : run.decision === "accept"
+  ));
 
   if (accepted) {
+    const connected = accepted.connectionState === "connected";
+    const revealPath = `/reveal?matchRunId=${encodeURIComponent(accepted.matchRunId)}`;
     return {
       state: "accepted",
-      primaryAction: { label: "開示情報を見る", href: "/reveal" },
-      allowedPaths: [...COMMON_PATHS, "/matches", ...reportPaths, "/reveal"],
+      primaryAction: { label: connected ? "チャットを開く" : "開示情報を見る", href: connected ? "/chat" : revealPath },
+      allowedPaths: [...COMMON_PATHS, "/matches", ...reportPaths, revealPath, ...(connected ? ["/chat"] : [])],
+      connectionState: accepted.connectionState,
     };
   }
 
-  const allDeclined = completed.every((run) => run.decision === "decline");
+  const allDeclined = completed.every((run) => (
+    run.connectionState === "closed" || run.decision === "decline"
+  ));
   if (allDeclined) {
     return {
       state: "declined",
@@ -112,7 +126,10 @@ export function deriveJourneyState(snapshot: JourneySnapshot): DerivedJourney {
 }
 
 // ホームの「現在の状況」に表示する説明文。
-export function describeJourneyState(state: JourneyStateName): string {
+export function describeJourneyState(
+  state: JourneyStateName,
+  connectionState?: ConnectionState | null,
+): string {
   switch (state) {
     case "interview":
       return `あなたのアバターが、あなたらしさを学んでいます。${TOTAL_QUESTIONS}問の質問に回答してください。`;
@@ -125,7 +142,9 @@ export function describeJourneyState(state: JourneyStateName): string {
     case "report_ready":
       return "相性の高いお相手候補が見つかりました。マッチ結果から会話ログと相性レポートを確認できます。";
     case "accepted":
-      return "「会ってみたい」を選びました。開示情報をご確認ください。";
+      return connectionState === "connected"
+        ? "最終承認が完了しました。チャットでお相手との会話を始められます。"
+        : "「会ってみたい」を選びました。開示情報をご確認ください。";
     case "declined":
       return "今回は見送りました。相手へは通知されません。";
     default:
@@ -135,12 +154,13 @@ export function describeJourneyState(state: JourneyStateName): string {
 
 type MatchRunRow = { id: string; status: MatchRunStatus };
 type DecisionRow = { match_run_id: string; kind: "accept" | "decline" };
+type ConnectionRow = { match_run_id: string; state: ConnectionState };
 // requireUser済みのownerIdから、ホーム表示に必要な現在状態(最大3件のmatch_runsと
 // それぞれの決定)をDBから取得する。RLSで自分の行しか見えない前提のうえ、
 // 明示的にowner_idも指定して二重に絞り込む。
 export async function getJourneySnapshot(userId: string): Promise<JourneySnapshot> {
   const client = await createServerSupabaseClient();
-  const [answersResult, matchResult] = await Promise.all([
+  const [answersResult, matchResult, connectionsResult] = await Promise.all([
     client
       .from("interview_answers")
       .select("question_code", { count: "exact", head: true })
@@ -150,6 +170,10 @@ export async function getJourneySnapshot(userId: string): Promise<JourneySnapsho
       .select("id, status")
       .eq("owner_id", userId)
       .order("candidate_id"),
+    client
+      .from("match_connections")
+      .select("match_run_id, state")
+      .eq("owner_id", userId),
   ]);
 
   if (answersResult.error) {
@@ -158,8 +182,14 @@ export async function getJourneySnapshot(userId: string): Promise<JourneySnapsho
   if (matchResult.error) {
     throw matchResult.error;
   }
+  if (connectionsResult.error) {
+    throw connectionsResult.error;
+  }
   const answeredCount = answersResult.count ?? 0;
   const runs = (matchResult.data ?? []) as MatchRunRow[];
+  const connectionByRunId = new Map(
+    ((connectionsResult.data ?? []) as ConnectionRow[]).map((row) => [row.match_run_id, row.state]),
+  );
 
   if (runs.length === 0) {
     return { answeredCount, matches: [] };
@@ -185,6 +215,7 @@ export async function getJourneySnapshot(userId: string): Promise<JourneySnapsho
       matchRunId: run.id,
       status: run.status,
       decision: decisionByRunId.get(run.id) ?? null,
+      connectionState: connectionByRunId.get(run.id) ?? null,
     })),
   };
 }

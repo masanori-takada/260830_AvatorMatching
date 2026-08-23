@@ -28,8 +28,7 @@ const matchInput: MatchInput = {
     },
   },
   candidate: {
-    avatarAlias: "ルナ",
-    conversationProfile: { summary: "散歩と読書が好き" },
+    conversationProfile: { summary: "ルナは散歩と読書が好き" },
   },
 };
 
@@ -93,6 +92,9 @@ describe("GeminiAiProvider", () => {
 
     expect(result).toEqual(buildValidMatchOutput());
     expect(client.generateJson).toHaveBeenCalledTimes(1);
+    const prompt = vi.mocked(client.generateJson).mock.calls[0]![0].prompt;
+    expect(prompt).not.toContain("ルナ");
+    expect(prompt).toContain("候補アバター");
   });
 
   it("再試行: 1回目が契約違反で2回目が正常なら成功する", async () => {
@@ -143,6 +145,18 @@ describe("GeminiAiProvider", () => {
         : message),
     };
     const generateJson = vi.fn().mockResolvedValue(JSON.stringify(outputWithUndisclosedRef));
+    const provider = new GeminiAiProvider({ client: { generateJson } });
+
+    await expect(provider.generateMatch(matchInput)).rejects.toThrow("INVALID_OUTPUT");
+    expect(generateJson).toHaveBeenCalledTimes(2);
+  });
+
+  it("失敗: 候補の具体名を含む承認前出力は再試行後も拒否する", async () => {
+    const leaked = {
+      ...buildValidMatchOutput(),
+      report: { ...buildValidMatchOutput().report, summary: "陽翔とは自然に話せました。" },
+    };
+    const generateJson = vi.fn().mockResolvedValue(JSON.stringify(leaked));
     const provider = new GeminiAiProvider({ client: { generateJson } });
 
     await expect(provider.generateMatch(matchInput)).rejects.toThrow("INVALID_OUTPUT");

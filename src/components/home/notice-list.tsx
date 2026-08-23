@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { NotificationItem } from "@/features/notifications/server/queries";
+import { notificationHref } from "@/features/notifications/route";
 import styles from "./home.module.css";
 
 type NoticeListProps = {
@@ -25,7 +26,7 @@ export function NoticeList({ notifications }: NoticeListProps) {
             <li key={item.id}>
               <Link
                 className={styles.noticeRow}
-                href={item.matchRunId ? `/report?matchRunId=${item.matchRunId}` : "/notifications"}
+                href={notificationHref(item) ?? "/notifications"}
               >
                 <span className={styles.noticeRowBody}>
                   <span className={styles.cardTitle}>{item.title}</span>

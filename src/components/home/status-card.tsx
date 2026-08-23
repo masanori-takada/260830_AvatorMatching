@@ -22,7 +22,7 @@ export function StatusCard({ journey }: StatusCardProps) {
         </span>
         <div>
           <p className={styles.cardTitle}>現在の状況</p>
-          <p className={styles.bodyText}>{describeJourneyState(journey.state)}</p>
+          <p className={styles.bodyText}>{describeJourneyState(journey.state, journey.connectionState)}</p>
         </div>
       </div>
       <ProgressSteps state={journey.state} />

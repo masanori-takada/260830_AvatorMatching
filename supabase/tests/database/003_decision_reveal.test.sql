@@ -18,6 +18,15 @@ values
   ('00000000-0000-4000-8000-000000000098', '架空みなみ（完全架空）', '架空株式会社アステル', '架空推進室', '完全に架空の候補者紹介です。')
 on conflict (candidate_id) do nothing;
 
+update public.candidate_reveals
+set first_name = 'みなと', age_range = '30代前半', interests = array['読書']::text[],
+  photo_path = '/images/demo-candidates/test-minato.webp', is_ai_generated = true
+where candidate_id = '00000000-0000-4000-8000-000000000099';
+update public.candidate_reveals
+set first_name = 'みなみ', age_range = '20代後半', interests = array['旅行']::text[],
+  photo_path = '/images/demo-candidates/test-minami.webp', is_ai_generated = true
+where candidate_id = '00000000-0000-4000-8000-000000000098';
+
 -- decision_ownerには2件のcompleted runを持たせ、「承諾は1利用者1件まで」
 -- (owner単位)を検証できるようにする。他のownerは既存どおり1件のまま。
 insert into public.match_runs(owner_id, candidate_id, status, provider, completed_at)
@@ -34,15 +43,11 @@ select id as owner_second_run_id from public.match_runs
 select id as other_run_id from public.match_runs where owner_id = tests.get_supabase_uid('decision_other') \gset
 select id as decline_run_id from public.match_runs where owner_id = tests.get_supabase_uid('decline_owner') \gset
 
--- decisions_owner_accept_uidxが「1owner1件のaccept」をDBレベルで保証していることを、
--- RPC(commit_decision)を介さず直接確認する(アプリ側のチェックだけに頼っていないことの検証)。
--- ここではまだauthenticatedロールへ切り替えていないため、テーブル所有者権限で直接INSERTできる。
+-- 旧owner-wide unique制約を外し、直接INSERTでは複数acceptを保持できることを確認する。
 insert into public.decisions(owner_id, match_run_id, kind) values (tests.get_supabase_uid('decision_owner'), :'owner_run_id', 'accept');
-select throws_ok(
-  format('insert into public.decisions(owner_id, match_run_id, kind) values (%L, %L, %L)',
-    tests.get_supabase_uid('decision_owner'), :'owner_second_run_id', 'accept'),
-  '23505', null, '同一ownerの2件目acceptはDBの部分ユニークインデックスで拒否される'
-);
+insert into public.decisions(owner_id, match_run_id, kind) values (tests.get_supabase_uid('decision_owner'), :'owner_second_run_id', 'accept');
+select is((select count(*) from public.decisions where owner_id = tests.get_supabase_uid('decision_owner')), 2::bigint,
+  'owner-wide制約を外したdecisionsは複数acceptを保持できる');
 delete from public.decisions where owner_id = tests.get_supabase_uid('decision_owner');
 
 select ok(not has_function_privilege('anon', 'public.commit_decision(uuid,public.decision_kind)', 'EXECUTE'), 'anonは決定RPCを実行できない');
@@ -66,7 +71,7 @@ select is((select kind from public.decisions where match_run_id = :'owner_run_id
 select is((select count(*) from public.decisions where match_run_id = :'owner_run_id'), 1::bigint, '決定は1件だけ');
 select is((public.commit_decision(:'owner_run_id', 'accept')).id, :'decision_id'::uuid, '同じ決定の再実行は冪等');
 select is((select count(*) from public.get_candidate_reveal(:'owner_run_id')), 1::bigint, '承諾後は開示1件');
-select is((select full_name from public.get_candidate_reveal(:'owner_run_id')), '星野みなと（完全架空）', '固定列の氏名を返す');
+select is((select first_name from public.get_candidate_reveal(:'owner_run_id')), 'みなと', '下の名前だけを返す');
 select throws_ok(format('select public.commit_decision(%L, %L)', :'owner_run_id', 'decline'), 'P0001', 'DECISION_CONFLICT:accept', 'opposite retryは競合');
 select throws_ok(format('insert into public.decisions(owner_id, match_run_id, kind) values (%L, %L, %L)', tests.get_supabase_uid('decision_owner'), :'owner_run_id', 'accept'), '42501', null, '直接INSERTできない');
 select throws_ok(format('update public.decisions set kind = %L where match_run_id = %L', 'decline', :'owner_run_id'), '42501', null, '直接UPDATEできない');
@@ -75,7 +80,7 @@ select throws_ok(format('update public.decisions set kind = %L where match_run_i
 -- 承諾できない。かつ、その未決定候補の開示は依然として0件のまま(SC-006)。
 select throws_ok(
   format('select public.commit_decision(%L, %L)', :'owner_second_run_id', 'accept'),
-  'P0001', 'ACCEPT_ALREADY_DECIDED', '別候補で承諾済みなら2件目のacceptは拒否される'
+  'P0001', 'ACTIVE_CONNECTION_EXISTS', 'アクティブなconnectionがあれば別候補のacceptは拒否される'
 );
 select is((select count(*) from public.decisions where match_run_id = :'owner_second_run_id'), 0::bigint,
   '拒否された2件目には決定が残らない');

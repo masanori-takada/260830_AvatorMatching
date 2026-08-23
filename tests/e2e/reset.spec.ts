@@ -78,9 +78,9 @@ test("会話・レポートが揃い1人を承諾した状態でもリセット�
 
   // decisionsに行がある状態(1人を承諾)でもリセットできることを確認する
   // (このリセット経路も従来は未検証だった)。
-  await page.getByRole("button", { name: "承諾する" }).click();
-  await page.getByRole("button", { name: "承諾を確定する" }).click();
-  await expect(page).toHaveURL(/\/reveal$/);
+  await page.getByRole("button", { name: "プロフィール開示を希望" }).click();
+  await page.getByRole("dialog", { name: "プロフィール開示を確認" }).getByRole("button", { name: "プロフィール開示を確定" }).click();
+  await expect(page).toHaveURL(/\/reveal\?matchRunId=/);
 
   await page.goto("/settings");
   await page.getByRole("button", { name: "デモをリセット" }).click();

@@ -42,7 +42,7 @@ describe("processOwnedMatch", () => {
     rpc.mockResolvedValueOnce({ data: "processing", error: null }).mockResolvedValueOnce({ data: null, error: null });
     getOwnedMatchInput.mockResolvedValue({
       answers: [], profile: { summary: "安全", traits: {} },
-      candidate: { avatarAlias: "ルナ", conversationProfile: {} },
+      candidate: { conversationProfile: {} },
     });
     getAiProvider.mockReturnValue({ providerId: "mock-v1", generateMatch });
     generateMatch.mockResolvedValue(output);

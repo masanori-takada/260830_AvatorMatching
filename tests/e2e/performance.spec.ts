@@ -100,9 +100,9 @@ test.describe("performance (2s budget, SC-010 fidelity gate companion)", () => {
       expect(page.getByRole("heading", { name: "お知らせ" })).toBeVisible());
 
     await page.goto(reportUrl);
-    await page.getByRole("button", { name: "承諾する" }).click();
-    await page.getByRole("button", { name: "承諾を確定する" }).click();
-    await expect(page).toHaveURL(/\/reveal$/);
+    await page.getByRole("button", { name: "プロフィール開示を希望" }).click();
+    await page.getByRole("dialog", { name: "プロフィール開示を確認" }).getByRole("button", { name: "プロフィール開示を確定" }).click();
+    await expect(page).toHaveURL(/\/reveal\?matchRunId=/);
 
     await expectWithinBudget(page, "/reveal", "/reveal", () =>
       expect(page.getByRole("heading", { name: "承諾後のプロフィール" })).toBeVisible());
@@ -112,8 +112,8 @@ test.describe("performance (2s budget, SC-010 fidelity gate companion)", () => {
     test.setTimeout(120_000);
 
     await reachFirstUndecidedReport(page);
-    await page.getByRole("button", { name: "辞退する" }).click();
-    await page.getByRole("button", { name: "辞退を確定する" }).click();
+    await page.getByRole("button", { name: "今回は見送る" }).click();
+    await page.getByRole("dialog", { name: "見送りを確認" }).getByRole("button", { name: "今回は見送る" }).click();
     await expect(page).toHaveURL(/\/declined$/);
 
     await expectWithinBudget(page, "/declined", "/declined", () =>

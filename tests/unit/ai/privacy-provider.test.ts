@@ -172,7 +172,7 @@ describe("PrivacySafeAiProvider", () => {
       const matchInput: MatchInput = {
         answers: privateAnswers,
         profile: safeProfile,
-        candidate: { avatarAlias: "ルナ", conversationProfile: {} },
+        candidate: { conversationProfile: {} },
       };
 
       await provider.generateMatch(matchInput);
@@ -198,7 +198,7 @@ describe("PrivacySafeAiProvider", () => {
       await expect(provider.generateMatch({
         answers,
         profile: safeProfile,
-        candidate: { avatarAlias: "ルナ", conversationProfile: {} },
+        candidate: { conversationProfile: {} },
       })).rejects.toThrow("自由記述由来の識別情報");
     });
 

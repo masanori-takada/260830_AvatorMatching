@@ -112,9 +112,9 @@ test.describe("accessibility axe (SC-011)", () => {
     await expectNoSeriousViolations(page, "/notifications");
 
     await page.goto(reportUrl);
-    await page.getByRole("button", { name: "承諾する" }).click();
-    await page.getByRole("button", { name: "承諾を確定する" }).click();
-    await expect(page).toHaveURL(/\/reveal$/);
+    await page.getByRole("button", { name: "プロフィール開示を希望" }).click();
+    await page.getByRole("dialog", { name: "プロフィール開示を確認" }).getByRole("button", { name: "プロフィール開示を確定" }).click();
+    await expect(page).toHaveURL(/\/reveal\?matchRunId=/);
     await expectNoSeriousViolations(page, "/reveal");
   });
 
@@ -122,8 +122,8 @@ test.describe("accessibility axe (SC-011)", () => {
     test.setTimeout(120_000);
 
     await reachFirstUndecidedReport(page);
-    await page.getByRole("button", { name: "辞退する" }).click();
-    await page.getByRole("button", { name: "辞退を確定する" }).click();
+    await page.getByRole("button", { name: "今回は見送る" }).click();
+    await page.getByRole("dialog", { name: "見送りを確認" }).getByRole("button", { name: "今回は見送る" }).click();
     await expect(page).toHaveURL(/\/declined$/);
     await expectNoSeriousViolations(page, "/declined");
   });

@@ -80,7 +80,7 @@ export default async function HomePage() {
         <span className={styles.bannerBody}>
           <span className={styles.cardTitle}>安心・匿名の設計</span>
           <span className={styles.bodyText}>
-            実名や所属は、あなたとお相手がOKした後にのみ開示されます。人事や運営がマッチ内容を見ることはできません。
+            下の名前・年齢層・趣味・自己紹介文・AI生成の架空写真だけを段階的に開示します。姓や所属、連絡先は表示しません。
           </span>
         </span>
       </Link>

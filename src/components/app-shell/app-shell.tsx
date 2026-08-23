@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { BottomNav } from "./bottom-nav";
 import styles from "./app-shell.module.css";
 
-export type AppTab = "home" | "mypage" | "notifications" | "settings";
+export type AppTab = "home" | "mypage" | "notifications" | "settings" | "chat";
 
 type AppShellProps = {
   children: ReactNode;

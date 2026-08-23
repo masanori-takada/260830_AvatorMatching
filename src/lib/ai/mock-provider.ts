@@ -7,25 +7,25 @@ const answerAt = (answers: readonly AiAnswer[], code: string) =>
 const safeAnswerAt = (answers: readonly AiAnswer[], code: string) =>
   Array.from(answerAt(answers, code)).slice(0, 80).join("");
 
-// 候補アバターの匿名エイリアスから決定論的な整数を作る。3人の候補で結果が
+// 候補アバターの匿名プロフィールから決定論的な整数を作る。3人の候補で結果が
 // 全部同じだと「複数の相手と会話した」という体験の一覧が意味をなさないため、
 // これを種にスコアと総評の文面を候補ごとに変える(同じ入力なら常に同じ出力にはなる)。
-function hashAlias(alias: string): number {
+function hashText(value: string): number {
   let hash = 0;
-  for (const char of alias) hash = (hash * 31 + char.codePointAt(0)!) >>> 0;
+  for (const char of value) hash = (hash * 31 + char.codePointAt(0)!) >>> 0;
   return hash;
 }
 
 const SUMMARY_TEMPLATES = [
-  (alias: string) => `${alias}とは会話のテンポが合い、気負わず話せる相手だと感じられました。`,
-  (alias: string) => `${alias}とは価値観の共通点が多く、落ち着いて話を深められました。`,
-  (alias: string) => `${alias}とは慎重に距離を測り合う、丁寧な会話になりました。`,
+  "お相手とは会話のテンポが合い、気負わず話せる相手だと感じられました。",
+  "お相手とは価値観の共通点が多く、落ち着いて話を深められました。",
+  "お相手とは慎重に距離を測り合う、丁寧な会話になりました。",
 ] as const;
 
 const CAUTION_TEMPLATES = [
-  (alias: string) => `${alias}とは生活リズムに違いもあるため、早めに言葉で確認すると安心です。`,
-  (alias: string) => `${alias}とは初対面の距離感に差があるため、ペースを合わせる工夫が役立ちます。`,
-  (alias: string) => `${alias}とは会話のテンポに差があるため、無理に合わせすぎないことも大切です。`,
+  "お相手とは生活リズムに違いもあるため、早めに言葉で確認すると安心です。",
+  "お相手とは初対面の距離感に差があるため、ペースを合わせる工夫が役立ちます。",
+  "お相手とは会話のテンポに差があるため、無理に合わせすぎないことも大切です。",
 ] as const;
 
 export class MockAiProvider implements AiProvider {
@@ -57,15 +57,14 @@ export class MockAiProvider implements AiProvider {
         speaker: index % 2 === 0 ? "user_avatar" as const : "candidate_avatar" as const,
         body: index % 2 === 0
           ? `${item.code}の「${item.value}」という回答を共有しました。`
-          : `${input.candidate.avatarAlias}の匿名プロフィールと照らして共通点を確かめました。`,
+          : "候補アバターの匿名プロフィールと照らして共通点を確かめました。",
         answerRefs: [item.code],
       };
     });
     const axes = [
       "conversation_flow", "values_alignment", "humor_fit", "mutual_interest", "mismatch_severity",
     ] as const;
-    const alias = input.candidate.avatarAlias;
-    const seed = hashAlias(alias);
+    const seed = hashText(JSON.stringify(input.candidate.conversationProfile));
     // overallScoreは58〜92、mismatch_severityは12〜41、他4軸は55〜94の範囲で
     // 候補ごとに変える(全員同じ結果にならないようにするため)。
     const overallScore = 58 + (seed % 35);
@@ -73,15 +72,15 @@ export class MockAiProvider implements AiProvider {
       messages,
       report: {
         overallScore,
-        summary: SUMMARY_TEMPLATES[seed % SUMMARY_TEMPLATES.length]!(alias),
-        caution: CAUTION_TEMPLATES[seed % CAUTION_TEMPLATES.length]!(alias),
+        summary: SUMMARY_TEMPLATES[seed % SUMMARY_TEMPLATES.length]!,
+        caution: CAUTION_TEMPLATES[seed % CAUTION_TEMPLATES.length]!,
         dimensions: axes.map((axis, index) => {
           const shifted = (seed >>> (index * 3 + 1)) % 30;
           const score = axis === "mismatch_severity" ? 12 + shifted : 55 + shifted + index * 2;
           return {
             axis,
             score: Math.min(100, score),
-            explanation: `${alias}との${index + 1}番目の発言を根拠にした評価です。`,
+            explanation: `お相手との${index + 1}番目の発言を根拠にした評価です。`,
             evidenceTurnIndex: index + 1,
           };
         }),

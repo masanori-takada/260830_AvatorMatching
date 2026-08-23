@@ -18,7 +18,6 @@ export type MatchInput = {
   /** 旧テストデータとの互換用。会話生成プロンプトでは参照しない。 */
   profile?: AvatarProfileOutput;
   candidate: {
-    avatarAlias: string;
     conversationProfile: Record<string, unknown>;
   };
 };

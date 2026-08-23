@@ -7,7 +7,7 @@ type BottomNavProps = {
 
 type NavigationItem = {
   href: string;
-  icon: "home" | "mypage" | "notifications" | "settings";
+  icon: "home" | "mypage" | "notifications" | "settings" | "chat";
   label: string;
   tab: AppTab;
 };
@@ -22,6 +22,7 @@ const navigationItems: NavigationItem[] = [
     icon: "notifications",
   },
   { tab: "settings", label: "設定", href: "/settings", icon: "settings" },
+  { tab: "chat", label: "チャット", href: "/chat", icon: "chat" },
 ];
 
 export function BottomNav({ activeTab }: BottomNavProps) {
@@ -66,6 +67,15 @@ function NavigationIcon({ name }: { name: NavigationItem["icon"] }) {
       <svg aria-hidden="true" viewBox="0 0 24 24">
         <path d="M18 10a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
         <path d="M10 22h4" />
+      </svg>
+    );
+  }
+
+  if (name === "chat") {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4.2A2.5 2.5 0 0 1 4 12.5z" />
+        <path d="M8 8h8M8 11h5" />
       </svg>
     );
   }

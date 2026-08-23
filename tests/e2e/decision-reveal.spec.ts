@@ -2,12 +2,12 @@ import { expect, test } from "./support/access-gate";
 
 import { reachFirstUndecidedReport, reachMatchList } from "./support/matching";
 
-// 承諾後、/revealにはどの候補の架空プロフィールが表示されて「良い」かを判定するための目印。
-// (202608220003_fix_start_match_run.sqlで投入される3候補ぶん)
+// 承諾後、/revealにはどの候補の安全な架空プロフィールが表示されて「良い」かを判定するための目印。
+// (二段階同意migrationで投入される3候補ぶん)
 const FICTIONAL_PROFILE_MARKERS = [
-  { label: "星乃", markers: ["星乃", "ルミナス架空企画", "未来対話デザイン室"] },
-  { label: "天野", markers: ["天野 陽翔", "架空アウトドアリンク"] },
-  { label: "柊", markers: ["柊 紬", "架空手芸工房"] },
+  { label: "ルナ", markers: ["ルナ", "30代前半", "家庭料理"] },
+  { label: "陽翔", markers: ["陽翔", "キャンプ", "旅行の計画"] },
+  { label: "紬", markers: ["紬", "20代後半", "手芸"] },
 ];
 
 test("承諾前の直URLでは漏洩せず明示承諾後だけ架空プロフィールを開示する", async ({ page }) => {
@@ -18,19 +18,19 @@ test("承諾前の直URLでは漏洩せず明示承諾後だけ架空プロフ�
   // "/"自体がさらに"/home"へredirectする(src/app/page.tsx)。最終到達先で検証する。
   await expect(page).toHaveURL(/\/home$/);
   await page.goto(reportUrl);
-  await page.getByRole("button", { name: "承諾する" }).click();
-  await page.getByRole("button", { name: "承諾を確定する" }).click();
-  await expect(page).toHaveURL(/\/reveal$/);
-  await expect(page.getByText("以下は本デモ用の完全な架空情報です。")).toBeVisible();
+  await page.getByRole("button", { name: "プロフィール開示を希望" }).click();
+  await page.getByRole("dialog", { name: "プロフィール開示を確認" }).getByRole("button", { name: "プロフィール開示を確定" }).click();
+  await expect(page).toHaveURL(/\/reveal\?matchRunId=/);
+  await expect(page.getByText("以下はAI生成の完全な架空プロフィールです。")).toBeVisible();
 });
 
 test("辞退後も候補者情報を開示しない", async ({ page }) => {
   await reachFirstUndecidedReport(page);
-  await page.getByRole("button", { name: "辞退する" }).click();
-  await page.getByRole("button", { name: "辞退を確定する" }).click();
+  await page.getByRole("button", { name: "今回は見送る" }).click();
+  await page.getByRole("dialog", { name: "見送りを確認" }).getByRole("button", { name: "今回は見送る" }).click();
   await expect(page).toHaveURL(/\/declined$/);
   await expect(page.locator("main")).not.toContainText(
-    /星乃|ルミナス架空企画|未来対話デザイン室|天野 陽翔|架空アウトドアリンク|柊 紬|架空手芸工房/u,
+    /以下はAI生成の完全な架空プロフィールです。|\/images\/demo-candidates\//u,
   );
   await page.goto("/reveal");
   // 未承諾で/revealへ直接アクセスすると"/"へredirectされるが、認証済みセッションは
@@ -46,9 +46,9 @@ test("1人を承諾すると、他の候補はもう選べなくなる", async (
   expect(candidateCount).toBeGreaterThanOrEqual(2);
 
   await candidateLinks.first().click();
-  await page.getByRole("button", { name: "承諾する" }).click();
-  await page.getByRole("button", { name: "承諾を確定する" }).click();
-  await expect(page).toHaveURL(/\/reveal$/);
+  await page.getByRole("button", { name: "プロフィール開示を希望" }).click();
+  await page.getByRole("dialog", { name: "プロフィール開示を確認" }).getByRole("button", { name: "プロフィール開示を確定" }).click();
+  await expect(page).toHaveURL(/\/reveal\?matchRunId=/);
 
   await page.goto("/matches");
   await expect(page.getByText("他の方を承諾したため、見送りになりました。").first()).toBeVisible();
@@ -71,17 +71,17 @@ test("承諾済みの候補以外へ直接アクセスしても承諾できな�
 
   // 1人目を承諾する
   await candidateLinks.first().click();
-  await page.getByRole("button", { name: "承諾する" }).click();
-  await page.getByRole("button", { name: "承諾を確定する" }).click();
-  await expect(page).toHaveURL(/\/reveal$/);
+  await page.getByRole("button", { name: "プロフィール開示を希望" }).click();
+  await page.getByRole("dialog", { name: "プロフィール開示を確認" }).getByRole("button", { name: "プロフィール開示を確定" }).click();
+  await expect(page).toHaveURL(/\/reveal\?matchRunId=/);
 
   // 控えておいた他候補のレポートURLへ直接アクセスしても、
   // 承諾できず・架空プロフィールの実データも表示されないこと
   for (const url of otherReportUrls) {
     await page.goto(url);
-    await expect(page.getByRole("button", { name: "承諾する" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "プロフィール開示を希望" })).toHaveCount(0);
     await expect(page.locator("main")).not.toContainText(
-      /星乃|ルミナス架空企画|未来対話デザイン室|天野 陽翔|架空アウトドアリンク|柊 紬|架空手芸工房/u,
+      /以下はAI生成の完全な架空プロフィールです。|\/images\/demo-candidates\//u,
     );
     await expect(page.getByText("他の方を承諾したため、この候補は選べません。")).toBeVisible();
     await expect(page.getByRole("link", { name: "マッチ結果に戻る" })).toBeVisible();

@@ -13,14 +13,12 @@ test("複数候補との匿名会話・マッチ結果一覧・5軸レポート�
   await expect(page.getByText("低いほど良い")).toBeVisible();
   await expect(page.getByText("総評")).toBeVisible();
   await expect(page.getByText(/あなたのアバター/u).first()).toBeVisible();
-  // ラベル語(氏名・会社・部署など)での判定は、正当なUI文言
-  // (例:「承諾するまで氏名や所属は開示されません。」という決定セクションの説明文)にも
-  // 一致してしまい誤検知する。承諾前に検査すべきなのは「承諾後にだけ開示される
-  // 架空プロフィールの実データが漏れていないか」なので、その具体値で判定する
-  // (seed.sqlの3候補いずれの実データも漏れていないこと)。
-  await expect(page.locator("main")).not.toContainText(
-    /星乃|ルミナス架空企画|未来対話デザイン室|天野 陽翔|架空アウトドアリンク|柊 紬|架空手芸工房/u,
+  const preConsentMain = page.locator("main");
+  await expect(preConsentMain).not.toContainText(/ルナ|陽翔|紬|蒼太|隼人|芽衣/u);
+  await expect(preConsentMain).not.toContainText(
+    /30代前半|20代後半|キャンプ・フットサル・旅行の計画|以下はAI生成の完全な架空プロフィールです。/u,
   );
+  await expect(preConsentMain.locator('img[src*="/images/demo-candidates/"]')).toHaveCount(0);
 
   await page.goto("/notifications");
   await expect(page.getByRole("heading", { name: "お知らせ" })).toBeVisible();
@@ -38,5 +36,5 @@ test("複数候補との匿名会話・マッチ結果一覧・5軸レポート�
 
 test("マッチ結果一覧から候補を選んでレポートへ進める", async ({ page }) => {
   await reachFirstUndecidedReport(page);
-  await expect(page.getByRole("button", { name: "辞退する" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "今回は見送る" })).toBeVisible();
 });

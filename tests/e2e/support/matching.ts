@@ -25,5 +25,5 @@ export async function reachMatchList(page: Page): Promise<void> {
 export async function reachFirstUndecidedReport(page: Page): Promise<void> {
   await reachMatchList(page);
   await page.getByRole("link", { name: /相性 \d+%/u }).first().click();
-  await expect(page.getByRole("button", { name: "承諾する" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "プロフィール開示を希望" })).toBeVisible();
 }

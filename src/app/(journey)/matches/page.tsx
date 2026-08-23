@@ -128,7 +128,13 @@ function MatchCard({ match, acceptedElsewhere }: { match: MatchSummary; accepted
     );
   }
 
-  const decisionLabel = match.decision === "accept" ? "承諾済み" : match.decision === "decline" ? "辞退済み" : null;
+  const decisionLabel = match.connectionState === "connected"
+    ? "チャット接続済み"
+    : match.connectionState === "closed"
+      ? "見送り済み"
+      : match.connectionState === "profile_revealed" || match.connectionState === "contact_pending"
+        ? "プロフィール開示済み"
+        : match.decision === "decline" ? "辞退済み" : null;
 
   return (
     <Link className={styles.card} href={`/report?matchRunId=${match.matchRunId}`}>

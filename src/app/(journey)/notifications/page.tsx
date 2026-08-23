@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { NotificationCard } from "@/components/notifications/notification-card";
 import { getOwnedNotifications, markNotificationRead } from "@/features/notifications/server/queries";
+import { notificationHref } from "@/features/notifications/route";
 import styles from "../journey.module.css";
 
 export default async function NotificationsPage() {
@@ -19,7 +20,8 @@ export default async function NotificationsPage() {
                 "use server";
                 await markNotificationRead(item.id);
                 revalidatePath("/notifications");
-                if (item.matchRunId) redirect(`/report?matchRunId=${item.matchRunId}`);
+                const href = notificationHref(item);
+                if (href) redirect(href);
               }}
               item={item}
               key={item.id}

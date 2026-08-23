@@ -9,8 +9,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 import { decisionInputSchema, type DecisionInput } from "./schemas";
 
-type DecisionOutput = { kind: "accept" | "decline"; nextPath: "/reveal" | "/declined" };
-type DecisionConflictDetails = { storedDecision: "accept" | "decline"; nextPath: "/reveal" | "/declined" };
+type DecisionOutput = { kind: "accept" | "decline"; nextPath: string };
+type DecisionConflictDetails = { storedDecision: "accept" | "decline"; nextPath: string };
 export type CommitDecisionResult =
   | { ok: true; data: DecisionOutput }
   | { ok: false; error: ActionError & { details?: DecisionConflictDetails } };
@@ -28,7 +28,9 @@ export async function commitDecision(input: DecisionInput): Promise<CommitDecisi
     });
     const storedDecision = error?.message.match(/DECISION_CONFLICT:(accept|decline)/)?.[1] as "accept" | "decline" | undefined;
     if (storedDecision) {
-      const nextPath = storedDecision === "accept" ? "/reveal" : "/declined";
+      const nextPath = storedDecision === "accept"
+        ? `/reveal?matchRunId=${encodeURIComponent(parsed.data.matchRunId)}`
+        : "/declined";
       return {
         ok: false,
         error: {
@@ -44,6 +46,9 @@ export async function commitDecision(input: DecisionInput): Promise<CommitDecisi
     if (dbErrorId === "ACCEPT_ALREADY_DECIDED") {
       return failure("STATE_CONFLICT", "すでに他の候補を承諾しています。承諾できるのはお一人だけです。", false);
     }
+    if (dbErrorId === "ACTIVE_CONNECTION_EXISTS") {
+      return failure("STATE_CONFLICT", "すでに別の候補とのつながりがあります。", false);
+    }
     if (dbErrorId === "MATCH_NOT_FOUND") {
       return failure("NOT_FOUND", "対象のマッチが見つかりません。", false);
     }
@@ -53,7 +58,12 @@ export async function commitDecision(input: DecisionInput): Promise<CommitDecisi
     if (error) throw error;
     const row = (Array.isArray(data) ? data[0] : data) as { kind?: unknown } | null;
     if (!row || (row.kind !== "accept" && row.kind !== "decline")) throw new Error("INVALID_DECISION_RESULT");
-    return success({ kind: row.kind, nextPath: row.kind === "accept" ? "/reveal" : "/declined" });
+    return success({
+      kind: row.kind,
+      nextPath: row.kind === "accept"
+        ? `/reveal?matchRunId=${encodeURIComponent(parsed.data.matchRunId)}`
+        : "/declined",
+    });
   } catch (error) {
     const actionError = toActionError(error);
     if (actionError.code === "INTERNAL_ERROR") {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { TOTAL_QUESTIONS } from "@/features/interview/domain";
-import { deriveJourneyState } from "@/features/matching/server/journey-state";
+import { describeJourneyState, deriveJourneyState } from "@/features/matching/server/journey-state";
 
 describe("deriveJourneyState", () => {
   it("未完了のインタビューでは次の未回答質問への継続を主操作にする", () => {
@@ -81,7 +81,7 @@ describe("deriveJourneyState", () => {
       ],
     });
     expect(result.state).toBe("accepted");
-    expect(result.primaryAction.href).toBe("/reveal");
+    expect(result.primaryAction.href).toBe("/reveal?matchRunId=m2");
   });
 
   it("完了した全件を辞退済みなら結果画面への導線を主操作にする", () => {
@@ -120,5 +120,40 @@ describe("deriveJourneyState", () => {
     expect(result.allowedPaths).toEqual(expect.arrayContaining([
       "/matches", "/report?matchRunId=m1", "/report?matchRunId=m2",
     ]));
+  });
+
+  it.each([
+    { connectionState: "profile_pending" as const, primaryPath: "/matches", revealAllowed: false, chatAllowed: false },
+    { connectionState: "profile_revealed" as const, primaryPath: "/reveal?matchRunId=m1", revealAllowed: true, chatAllowed: false },
+    { connectionState: "contact_pending" as const, primaryPath: "/reveal?matchRunId=m1", revealAllowed: true, chatAllowed: false },
+    { connectionState: "connected" as const, primaryPath: "/chat", revealAllowed: true, chatAllowed: true },
+  ])("connection state $connectionState に対応する主導線だけを許可する", ({ connectionState, primaryPath, revealAllowed, chatAllowed }) => {
+    const result = deriveJourneyState({
+      answeredCount: TOTAL_QUESTIONS,
+      matches: [{ matchRunId: "m1", status: "completed", decision: "accept", connectionState }],
+    });
+
+    expect(result.primaryAction.href).toBe(primaryPath);
+    expect(result.allowedPaths.includes("/reveal?matchRunId=m1")).toBe(revealAllowed);
+    expect(result.allowedPaths.includes("/chat")).toBe(chatAllowed);
+  });
+
+  it("closed後に未決定の別候補があればマッチ結果へ戻す", () => {
+    const result = deriveJourneyState({
+      answeredCount: TOTAL_QUESTIONS,
+      matches: [
+        { matchRunId: "m1", status: "completed", decision: "accept", connectionState: "closed" },
+        { matchRunId: "m2", status: "completed", decision: null, connectionState: null },
+      ],
+    });
+
+    expect(result.state).toBe("report_ready");
+    expect(result.primaryAction.href).toBe("/matches");
+    expect(result.allowedPaths).not.toContain("/chat");
+  });
+
+  it("ホーム説明をプロフィール開示後と接続後で区別する", () => {
+    expect(describeJourneyState("accepted", "profile_revealed")).toContain("開示情報");
+    expect(describeJourneyState("accepted", "connected")).toContain("チャット");
   });
 });

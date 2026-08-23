@@ -22,6 +22,12 @@ export const DB_ERROR_CODES = [
   "INVALID_OUTPUT",
   "INVALID_ERROR_CODE",
   "ACCEPT_ALREADY_DECIDED",
+  "ACTIVE_CONNECTION_EXISTS",
+  "CONNECTION_NOT_FOUND",
+  "INVALID_CONTACT_DECISION",
+  "CONTACT_STATE_CONFLICT",
+  "INVALID_MESSAGE",
+  "CHAT_NOT_CONNECTED",
 ] as const;
 
 export type DbErrorCode = (typeof DB_ERROR_CODES)[number];
@@ -37,6 +43,9 @@ export function identifyDbErrorCode(
   message: string | null | undefined,
 ): DbErrorCode | typeof UNKNOWN_DB_ERROR_CODE {
   if (!message) return UNKNOWN_DB_ERROR_CODE;
-  const matched = DB_ERROR_CODES.find((code) => message.includes(code));
+  // 共通語を含む複合識別子(CONTACT_STATE_CONFLICTなど)を先に判定する。
+  const matched = [...DB_ERROR_CODES]
+    .sort((left, right) => right.length - left.length)
+    .find((code) => message.includes(code));
   return matched ?? UNKNOWN_DB_ERROR_CODE;
 }

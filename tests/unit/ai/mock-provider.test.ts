@@ -36,7 +36,7 @@ describe("MockAiProvider", () => {
     const match = await provider.generateMatch({
       answers,
       profile,
-      candidate: { avatarAlias: "ルナ", conversationProfile: { interests: ["読書"] } },
+      candidate: { conversationProfile: { interests: ["読書"] } },
     });
 
     expect(match.messages.length).toBeGreaterThanOrEqual(8);
@@ -53,13 +53,24 @@ describe("MockAiProvider", () => {
     expect(output).not.toContain("user@example.com");
   });
 
+  it("承認前の会話・総評・注意・5軸説明に候補の具体名を出力しない", async () => {
+    const match = await new MockAiProvider().generateMatch({
+      answers,
+      candidate: { conversationProfile: { introduction: "陽翔はキャンプが好きです" } },
+    });
+    const serialized = JSON.stringify(match);
+
+    expect(serialized).not.toMatch(/ルナ|陽翔|紬|蒼太|隼人|芽衣/u);
+    expect(serialized).toMatch(/候補アバター|お相手/u);
+  });
+
   it("実際に渡した回答コード(q01〜q03)だけをanswerRefsで参照する(開示同意の仕組みを損なわない)", async () => {
     const provider = new MockAiProvider();
     const profile = await provider.generateProfile({ answers });
     const match = await provider.generateMatch({
       answers,
       profile,
-      candidate: { avatarAlias: "ルナ", conversationProfile: { interests: ["読書"] } },
+      candidate: { conversationProfile: { interests: ["読書"] } },
     });
 
     const referencedCodes = new Set(match.messages.flatMap(({ answerRefs }) => answerRefs));
@@ -78,7 +89,7 @@ describe("MockAiProvider", () => {
     await expect(provider.generateMatch({
       answers: withoutQ01ToQ03,
       profile,
-      candidate: { avatarAlias: "ルナ", conversationProfile: { interests: ["読書"] } },
+      candidate: { conversationProfile: { interests: ["読書"] } },
     })).rejects.toThrow("AIへ渡していない質問コード");
   });
 

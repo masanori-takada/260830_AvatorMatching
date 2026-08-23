@@ -38,7 +38,7 @@ function clientWith(answers: Row[], candidateConsentGroups: string[]) {
           eq: () => ({
             eq: () => single({
               avatar_alias: "ルナ",
-              conversation_profile: {},
+              conversation_profile: { introduction: "陽翔はキャンプが好きです" },
               disclosure_consent_groups: candidateConsentGroups,
             }),
           }),
@@ -85,5 +85,12 @@ describe("getOwnedMatchInput", () => {
     const client = clientWith(buildAnswers(), []);
     const input = await getOwnedMatchInput(client, "run-1", "owner-1");
     expect(input.answers.map((a) => a.questionCode)).toContain("q01");
+  });
+
+  it("AI providerへ渡す入力オブジェクトに候補aliasを含めない", async () => {
+    const input = await getOwnedMatchInput(clientWith(buildAnswers(), []), "run-1", "owner-1");
+
+    expect(input.candidate).not.toHaveProperty("avatarAlias");
+    expect(JSON.stringify(input)).not.toMatch(/ルナ|陽翔|紬|蒼太|隼人|芽衣/u);
   });
 });

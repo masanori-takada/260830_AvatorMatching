@@ -1,4 +1,5 @@
 import { INTERVIEW_QUESTION_CODES } from "@/features/interview/domain";
+import { anonymizePreConsentValue } from "@/lib/ai/pre-consent-identity";
 import type { AiAnswer, MatchInput, ProfileInput } from "@/lib/ai/types";
 
 /**
@@ -53,8 +54,8 @@ export function buildMatchPrompt(input: MatchInput): string {
     "## あなたが代弁する人物(user_avatar)の回答",
     formatAnswers(input.answers),
     "",
-    `## 相手(candidate_avatar)の情報 呼称: ${input.candidate.avatarAlias}`,
-    JSON.stringify(input.candidate.conversationProfile),
+    "## 相手(candidate_avatar)の匿名情報 呼称: 候補アバター",
+    JSON.stringify(anonymizePreConsentValue(input.candidate.conversationProfile)),
     "",
     "## 会話の要件(最重要: 発言数だけ多くて中身が薄い会話は不合格)",
     "- 24〜36発言。turnIndexは1から連番。奇数がuser_avatar、偶数がcandidate_avatarで交互に話す。",
@@ -84,6 +85,7 @@ export function buildMatchPrompt(input: MatchInput): string {
     "- overallScoreは0〜100の整数。summaryは総評、cautionは気をつけると良い点。",
     "",
     "## 禁止事項",
+    "candidate_avatarの固有名・候補aliasを推測・出力せず、必ず「候補アバター」または「お相手」と表現すること。",
     SHARED_RULES,
   ].join("\n");
 }

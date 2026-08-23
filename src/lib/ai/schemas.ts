@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { INTERVIEW_QUESTION_CODES } from "@/features/interview/domain";
+import { containsPreConsentCandidateName } from "@/lib/ai/pre-consent-identity";
 
 const piiPatterns = [
   /[\w.+-]+@[\w.-]+\.[a-z]{2,}/iu,
@@ -42,6 +43,22 @@ export function redactPotentialPii(value: string): string {
     (current, pattern) => current.replace(new RegExp(pattern.source, `${pattern.flags}g`), "[非公開]"),
     value,
   );
+}
+
+function findCandidateNamePath(value: unknown, path: PropertyKey[] = []): PropertyKey[] | null {
+  if (typeof value === "string") return containsPreConsentCandidateName(value) ? path : null;
+  if (Array.isArray(value)) {
+    for (const [index, item] of value.entries()) {
+      const found = findCandidateNamePath(item, [...path, index]);
+      if (found) return found;
+    }
+  } else if (value && typeof value === "object") {
+    for (const [key, item] of Object.entries(value)) {
+      const found = findCandidateNamePath(item, [...path, key]);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 const traitSchema = z.string().min(1).max(200);
@@ -93,6 +110,14 @@ export const matchOutputSchema = z.strictObject({
   }),
 }).superRefine((output, context) => {
   rejectPotentialPii(output, context);
+  const candidateNamePath = findCandidateNamePath(output);
+  if (candidateNamePath) {
+    context.addIssue({
+      code: "custom",
+      message: "承認前の候補名を含む出力です。",
+      path: candidateNamePath,
+    });
+  }
   const axes = output.report.dimensions.map(({ axis }) => axis);
   if (new Set(axes).size !== 5) {
     context.addIssue({ code: "custom", message: "5軸は重複できません。", path: ["report", "dimensions"] });

@@ -4,7 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 export type NotificationItem = {
   id: string;
   matchRunId: string | null;
-  kind: "match_completed" | "report_ready";
+  kind: "match_completed" | "report_ready" | "contact_ready";
   title: string;
   body: string;
   readAt: string | null;
