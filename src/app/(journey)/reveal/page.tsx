@@ -18,7 +18,7 @@ export default async function RevealPage({ searchParams }: { searchParams: Promi
     <AppShell activeTab="home" showNavigation>
       <h1 className={styles.title}>承諾後のプロフィール</h1>
       <section className={styles.empty}>
-        <CandidatePhoto alt={`${reveal.firstName}の写真`} src={reveal.photoPath} />
+        <CandidatePhoto alt={`${reveal.firstName}の写真`} size="large" src={reveal.photoPath} />
         <p>以下はAI生成の完全な架空プロフィールです。</p>
         <h2>{reveal.firstName}</h2>
         <p>{reveal.ageRange}</p>

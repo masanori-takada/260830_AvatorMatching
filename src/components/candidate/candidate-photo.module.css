@@ -16,3 +16,13 @@
   justify-content: center;
 }
 
+/* 開示画面用。元画像は1254pxあるので、拡大しても粗くならない。 */
+.large {
+  flex: 0 0 160px;
+  height: 160px;
+  width: 160px;
+}
+
+.fallback.large {
+  font-size: 36px;
+}
